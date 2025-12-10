@@ -6,10 +6,9 @@ export default function Navbar() {
     <nav className="flex items-center justify-between px-8 py-6 max-w-7xl mx-auto w-full">
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2">
-        <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold">
-          S
+        <div className="w-[140px]">
+          <img src="/fyp logo 1.png" alt="Sedapify Logo" />
         </div>
-        <span className="text-2xl font-bold text-gray-800">Sedapify</span>
       </Link>
 
       {/* Navigation Links */}

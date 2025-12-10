@@ -46,18 +46,18 @@ const TRENDING_RECIPES = [
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-[#FDF8F0]">
+    <main className="min-h-screen bg-[url('/bg-img.png')] bg-cover bg-top">
       {" "}
       {/* Beige Background from image */}
       <Navbar />
       {/* --- HERO SECTION --- */}
       <section className="flex flex-col items-center justify-center text-center px-4 pt-16 pb-20 max-w-5xl mx-auto">
-        <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 leading-tight mb-6">
+        <h1 className="text-5xl md:text-6xl font-bold text-gray-900 leading-tight mb-6">
           Experience the Future of{" "}
           <span className="text-orange-400">Cooking</span> <br />
           with AI-Powered Recipes
         </h1>
-        <p className="text-gray-500 text-lg md:text-xl max-w-2xl mb-10">
+        <p className="text-gray-600 text-lg max-w-3xl mb-10">
           Let AI inspire your next meal with personalized recipe suggestions
           based on your ingredients.
         </p>
@@ -82,7 +82,7 @@ export default function Home() {
             <h2 className="text-3xl font-bold text-gray-900 mb-2">
               Trending Recipes
             </h2>
-            <p className="text-gray-500 max-w-lg">
+            <p className="text-gray-600 max-w-lg">
               Explore what everyone's cooking right now. Discover delicious
               trending recipes loved by home cooks.
             </p>
@@ -108,7 +108,7 @@ export default function Home() {
             <h2 className="text-3xl font-bold text-gray-900 mb-2">
               New Recipes
             </h2>
-            <p className="text-gray-500 max-w-lg">
+            <p className="text-gray-600 max-w-lg">
               Discover the hottest trending recipes and favorite masakan panas
               everyone's craving right now.
             </p>

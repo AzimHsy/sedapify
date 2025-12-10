@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import OpenAI from "openai";
 import { redirect } from "next/navigation";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.GROQ_API_KEY });
 
 export async function generateRecipeAction(formData: FormData) {
   const ingredients = formData.get("ingredients") as string;

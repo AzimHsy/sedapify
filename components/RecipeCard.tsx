@@ -20,7 +20,7 @@ export default function RecipeCard({
   id,
 }: RecipeCardProps) {
   return (
-    <div className="bg-white p-3 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 group">
+    <div className="bg-white p-3 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col">
       {/* Image Container */}
       <div className="relative h-48 w-full rounded-2xl overflow-hidden mb-4">
         <Image
@@ -35,15 +35,15 @@ export default function RecipeCard({
       </div>
 
       {/* Content */}
-      <div className="px-2 pb-2">
+      <div className="px-2 pb-2 flex flex-col">
         <h3 className="font-bold text-xl text-gray-900 mb-1">{title}</h3>
         <p className="text-gray-500 text-xs line-clamp-2 mb-4 h-8">
           {description}
         </p>
 
         {/* Footer info */}
-        <div className="flex items-center justify-between mt-4">
-          <div className="flex items-center gap-4 text-xs text-gray-500 font-medium">
+        <div className="flex items-center justify-between mt-4 ">
+          <div className="flex items-center gap-4 text-xs text-gray-600 font-medium">
             <div className="flex items-center gap-1">
               <ChefHat size={14} />
               <span>{views}</span>
