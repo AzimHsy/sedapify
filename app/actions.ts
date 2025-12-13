@@ -4,13 +4,17 @@ import { createClient } from "@/lib/supabase/server";
 import OpenAI from "openai";
 import { redirect } from "next/navigation";
 
-const openai = new OpenAI({ apiKey: process.env.GROQ_API_KEY });
+const openai = new OpenAI({
+  apiKey: process.env.GROQ_API_KEY,
+  baseURL: "https://api.groq.com/openai/v1",
+});
 
 export async function generateRecipeAction(formData: FormData) {
   const ingredients = formData.get("ingredients") as string;
+  const cuisine = formData.get("cuisine") as string; // 1. GET THE CUISINE
+
   const supabase = await createClient();
 
-  // 1. Authenticate User
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -18,10 +22,18 @@ export async function generateRecipeAction(formData: FormData) {
     redirect("/login");
   }
 
-  // 2. Prompt Engineering
+  // 2. UPDATE THE PROMPT with the cuisine
+  const cuisineInstruction =
+    cuisine && cuisine !== "Any"
+      ? `The recipe MUST be a ${cuisine} style dish.`
+      : "You can decide the best cuisine style.";
+
   const prompt = `
-    You are a master chef. Create a Malaysian-fusion recipe using these ingredients: ${ingredients}. 
-    Strictly return a valid JSON object with this structure:
+    You are a master chef. Create a recipe using these ingredients: ${ingredients}. 
+    ${cuisineInstruction}
+    
+    IMPORTANT: You must output ONLY valid JSON.
+    Return a JSON object with this exact structure:
     {
       "title": "Recipe Name",
       "description": "Short description",
@@ -33,26 +45,23 @@ export async function generateRecipeAction(formData: FormData) {
   `;
 
   try {
-    // 3. Call AI
     const completion = await openai.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
-      model: "gpt-3.5-turbo", // or 'gpt-4o' if you have budget
+      model: "llama-3.3-70b-versatile",
       response_format: { type: "json_object" },
     });
 
-    const recipeData = JSON.parse(
-      completion.choices[0].message.content || "{}"
-    );
+    const content = completion.choices[0].message.content || "{}";
+    const recipeData = JSON.parse(content);
 
-    // 4. Save to Database
     const { data, error } = await supabase
       .from("recipes")
       .insert({
         user_id: user.id,
         title: recipeData.title,
         description: recipeData.description,
-        ingredients: recipeData.ingredients, // This works because we used jsonb type
-        instructions: recipeData.instructions, // This works because we used jsonb type
+        ingredients: recipeData.ingredients,
+        instructions: recipeData.instructions,
         cooking_time: recipeData.cooking_time,
         difficulty: recipeData.difficulty,
         is_ai_generated: true,
@@ -62,10 +71,9 @@ export async function generateRecipeAction(formData: FormData) {
 
     if (error) throw new Error(error.message);
 
-    // 5. Redirect to the new recipe
     return { success: true, recipeId: data.id };
   } catch (error) {
-    console.error(error);
-    return { success: false, error: "Failed to generate recipe" };
+    console.error("AI Error:", error);
+    return { success: false, error: "Failed to generate recipe." };
   }
 }

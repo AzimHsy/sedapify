@@ -1,34 +1,55 @@
-import { createClient } from "@/lib/supabase/server"; // Note the 'lib' path
-import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import { ArrowLeft, Clock, BarChart, ChefHat } from "lucide-react";
 
 export default async function RecipePage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const supabase = await createClient();
+  const { id } = await params;
 
-  // 1. Fetch the recipe from the database using the ID in the URL
-  const { data: recipe, error } = await supabase
-    .from("recipes")
-    .select("*")
-    .eq("id", params.id)
-    .single();
+  // 1. Validate ID before calling Database
+  // If the ID is not a valid UUID (e.g. "undefined"), show error immediately
+  const isValidUUID =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
-  if (error || !recipe) {
+  if (!isValidUUID) {
     return (
-      <div className="p-10 text-center">
-        <h1 className="text-2xl text-red-500">Recipe not found!</h1>
-        <Link href="/" className="text-blue-500 hover:underline">
-          Go back home
-        </Link>
-      </div>
+      <ErrorDisplay
+        title="Invalid Recipe ID"
+        message={`The ID "${id}" is not valid. Please try generating a new recipe.`}
+      />
     );
   }
 
-  // 2. Parse ingredients/instructions if they are strings (just in case), otherwise use as is
-  // (Since we used jsonb, they usually come as arrays automatically)
+  const supabase = await createClient();
+
+  const { data: recipe, error } = await supabase
+    .from("recipes")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  // 2. Debugging Log (Check your VS Code Terminal)
+  if (error) {
+    console.log("----------------ERROR DETAILS----------------");
+    console.log("Requested ID:", id);
+    console.log("Supabase Message:", error.message);
+    console.log("Supabase Details:", error.details);
+    console.log("---------------------------------------------");
+  }
+
+  if (error || !recipe) {
+    return (
+      <ErrorDisplay
+        title="Recipe Not Found"
+        message="We couldn't find this recipe in the database. It might have been deleted or you don't have permission to view it."
+      />
+    );
+  }
+
+  // Parse JSON data safely
   const ingredientsList = Array.isArray(recipe.ingredients)
     ? recipe.ingredients
     : JSON.parse(recipe.ingredients || "[]");
@@ -38,58 +59,107 @@ export default async function RecipePage({
     : JSON.parse(recipe.instructions || "[]");
 
   return (
-    <div className="min-h-screen bg-orange-50 p-8 flex justify-center">
-      <div className="max-w-3xl w-full bg-white rounded-xl shadow-lg overflow-hidden">
-        {/* Header Image or Title */}
-        <div className="bg-orange-600 p-6 text-white">
-          <h1 className="text-3xl font-bold">{recipe.title}</h1>
-          <p className="mt-2 opacity-90">{recipe.description}</p>
-          <div className="flex gap-4 mt-4 text-sm font-semibold">
-            <span className="bg-white/20 px-3 py-1 rounded">
-              ⏱ {recipe.cooking_time || "N/A"}
-            </span>
-            <span className="bg-white/20 px-3 py-1 rounded">
-              📊 {recipe.difficulty || "Medium"}
-            </span>
-          </div>
-        </div>
-
-        <div className="p-8">
-          {/* Ingredients Section */}
-          <div className="mb-8">
-            <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">
-              🛒 Ingredients
-            </h2>
-            <ul className="list-disc pl-5 space-y-2 text-gray-700">
-              {ingredientsList.map((item: string, index: number) => (
-                <li key={index}>{item}</li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Instructions Section */}
-          <div>
-            <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">
-              👨‍🍳 Instructions
-            </h2>
-            <ol className="list-decimal pl-5 space-y-4 text-gray-700">
-              {instructionsList.map((step: string, index: number) => (
-                <li key={index} className="pl-2">
-                  {step}
-                </li>
-              ))}
-            </ol>
-          </div>
-
-          <div className="mt-10 text-center">
+    <div className="min-h-screen bg-[#FDF8F0] p-4 md:p-8 flex justify-center">
+      <div className="max-w-4xl w-full bg-white rounded-3xl shadow-xl overflow-hidden border border-orange-100">
+        {/* Header Section */}
+        <div className="bg-orange-500 p-8 md:p-12 text-white relative overflow-hidden">
+          <div className="relative z-10">
             <Link
               href="/"
-              className="inline-block bg-gray-800 text-white px-6 py-3 rounded-lg hover:bg-black transition"
+              className="inline-flex items-center gap-2 text-orange-100 hover:text-white mb-6 transition"
             >
-              Generate Another Recipe
+              <ArrowLeft size={20} /> Back to Generator
             </Link>
+            <h1 className="text-4xl md:text-5xl font-extrabold mb-4 leading-tight">
+              {recipe.title}
+            </h1>
+            <p className="text-lg text-orange-100 max-w-2xl">
+              {recipe.description}
+            </p>
+
+            <div className="flex flex-wrap gap-4 mt-6">
+              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full font-medium">
+                <Clock size={18} /> {recipe.cooking_time || "30 mins"}
+              </div>
+              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full font-medium">
+                <BarChart size={18} /> {recipe.difficulty || "Medium"}
+              </div>
+            </div>
+          </div>
+
+          <div className="absolute top-0 right-0 -mt-10 -mr-10 opacity-10">
+            <ChefHat size={300} />
           </div>
         </div>
+
+        <div className="grid md:grid-cols-3 gap-8 p-8 md:p-12">
+          {/* Ingredients Column */}
+          <div className="md:col-span-1 space-y-6">
+            <div className="bg-orange-50 p-6 rounded-2xl border border-orange-100">
+              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                🛒 Ingredients
+              </h2>
+              <ul className="space-y-3">
+                {ingredientsList.map((item: string, index: number) => (
+                  <li
+                    key={index}
+                    className="flex items-start gap-3 text-gray-700 text-sm"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-orange-400 mt-2 shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Instructions Column */}
+          <div className="md:col-span-2">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+              👨‍🍳 Cooking Instructions
+            </h2>
+            <div className="space-y-6">
+              {instructionsList.map((step: string, index: number) => (
+                <div key={index} className="flex gap-4 group">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-sm group-hover:bg-orange-500 group-hover:text-white transition-colors">
+                    {index + 1}
+                  </div>
+                  <p className="text-gray-600 leading-relaxed pt-1">{step}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-12 pt-8 border-t border-gray-100 flex justify-center">
+              <Link
+                href="/"
+                className="bg-gray-900 text-white px-8 py-4 rounded-xl font-bold hover:bg-black hover:shadow-lg transform hover:-translate-y-1 transition-all flex items-center gap-2"
+              >
+                <ChefHat size={20} /> Generate Another Recipe
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Helper component for errors
+function ErrorDisplay({ title, message }: { title: string; message: string }) {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-[#FDF8F0] p-4 text-center">
+      <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-orange-100">
+        <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+          <ChefHat size={32} />
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">{title}</h1>
+        <p className="text-gray-600 mb-6">{message}</p>
+        <Link
+          href="/"
+          className="inline-block w-full bg-orange-500 text-white px-6 py-3 rounded-xl font-bold hover:bg-orange-600 transition"
+        >
+          Go Back Home
+        </Link>
       </div>
     </div>
   );
