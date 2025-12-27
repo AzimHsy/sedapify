@@ -1,19 +1,75 @@
+"use client";
+
 import Link from "next/link";
-import { Search, Globe, ChevronDown, User } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+  ChevronDown,
+  User,
+  LogOut,
+  Settings,
+  PlusCircle,
+  ChefHat,
+  Loader2,
+} from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { User as SupabaseUser } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
 
 export default function Navbar() {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const supabase = createClient();
+  const router = useRouter();
+
+  useEffect(() => {
+    const getUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      setUser(user);
+      setLoading(false);
+    };
+
+    getUser();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user || null);
+        setLoading(false);
+      }
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [supabase]);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setIsDropdownOpen(false);
+    router.refresh();
+  };
+
+  const getDisplayName = () => {
+    if (!user) return "Guest";
+    return user.user_metadata?.full_name || user.email?.split("@")[0] || "User";
+  };
+
+  const getAvatarUrl = () => {
+    return user?.user_metadata?.avatar_url || null;
+  };
+
   return (
-    <nav className="flex items-center justify-between px-8 py-6 max-w-7xl mx-auto w-full">
+    <nav className="flex items-center justify-between px-8 py-6 max-w-7xl mx-auto w-full relative z-50">
       {/* Logo */}
-      <Link href="/" className="flex items-center gap-2">
-        <div className="w-[140px]">
-          <img src="/fyp logo 1.png" alt="Sedapify Logo" />
-        </div>
+      <Link href="/" className="flex w-[140px] items-center gap-2 group">
+        <img src="/fyp-logo.png" alt="Sedapify" />
       </Link>
 
-      {/* Navigation Links */}
-      <div className="hidden md:flex items-center gap-8 text-gray-600 font-medium">
-        <Link href="/" className="text-orange-500 font-semibold">
+      {/* Center Navigation Links */}
+      <div className="hidden md:flex items-center gap-8 text-gray-700 font-medium">
+        <Link href="/" className="text-orange-500 font-semibold hover:text-orange-600 transition">
           Home
         </Link>
         <Link href="/generate" className="hover:text-orange-500 transition">
@@ -28,30 +84,89 @@ export default function Navbar() {
         <Link href="/ranking" className="hover:text-orange-500 transition">
           Ranking
         </Link>
-        <div className="flex items-center gap-1 cursor-pointer hover:text-orange-500">
-          Cookbook <ChevronDown size={16} />
+        <div className="relative group cursor-pointer flex items-center gap-1 hover:text-orange-500 transition">
+          <span>Cookbook</span>
+          <ChevronDown size={16} />
+          {/* Simple Hover Dropdown for Cookbook */}
+          <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0">
+             <Link href="/cookbook/my-recipes" className="block px-4 py-2 hover:bg-orange-50 rounded-t-xl transition">My Recipes</Link>
+             <Link href="/cookbook/saved" className="block px-4 py-2 hover:bg-orange-50 rounded-b-xl transition">Saved</Link>
+          </div>
         </div>
       </div>
 
       {/* Right Side Actions */}
-      <div className="flex items-center gap-4">
-        {/* Language Selector (Mock) */}
-        <button className="flex items-center gap-2 text-gray-600">
-          <img
-            src="https://upload.wikimedia.org/wikipedia/commons/6/66/Flag_of_Malaysia.svg"
-            alt="MY"
-            className="w-6 h-4 object-cover rounded shadow-sm"
-          />
-        </button>
+      <div className="flex items-center gap-6">
+        {/* Malaysia Flag */}
+        <div className="text-2xl cursor-pointer hover:scale-110 transition-transform">
+          🇲🇾
+        </div>
 
-        {/* User Profile */}
-        <Link href="/login" className="flex items-center gap-2 pl-4">
-          <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden border-2 border-white shadow-sm">
-            {/* Placeholder Avatar */}
-            <User className="w-full h-full p-2 text-gray-500" />
+        {/* User Dropdown / Sign In */}
+        {loading ? (
+             <div className="w-10 h-10 rounded-full bg-gray-100 animate-pulse" />
+        ) : user ? (
+          <div className="relative">
+            <button
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              className="flex items-center gap-2 focus:outline-none"
+            >
+              <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden border border-gray-100 shadow-sm">
+                {getAvatarUrl() ? (
+                  <img
+                    src={getAvatarUrl()}
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <User className="w-full h-full p-2 text-gray-400" />
+                )}
+              </div>
+              <ChevronDown
+                size={16}
+                className={`text-gray-600 transition-transform ${
+                  isDropdownOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {/* Dropdown Menu */}
+            {isDropdownOpen && (
+              <div className="absolute right-0 mt-3 w-56 bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden py-2 animate-in fade-in slide-in-from-top-2">
+                <div className="px-4 py-2 border-b border-gray-50 mb-2">
+                  <p className="text-sm font-bold text-gray-900 truncate">
+                    {getDisplayName()}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                </div>
+
+                <Link
+                  href="/profile/edit"
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition"
+                  onClick={() => setIsDropdownOpen(false)}
+                >
+                  <Settings size={16} /> Edit Profile
+                </Link>
+
+                <div className="border-t border-gray-50 mt-2 pt-2">
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition"
+                  >
+                    <LogOut size={16} /> Sign Out
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-          <ChevronDown size={16} className="text-gray-400" />
-        </Link>
+        ) : (
+          <Link
+            href="/login"
+            className="flex items-center gap-2 px-6 py-2 bg-orange-500 text-white rounded-full font-bold hover:bg-orange-600 transition shadow-md hover:shadow-orange-200"
+          >
+            Sign In
+          </Link>
+        )}
       </div>
     </nav>
   );

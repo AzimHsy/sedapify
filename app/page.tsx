@@ -117,7 +117,7 @@ export default function Home() {
         </p>
 
         {/* --- THE MAGIC INPUT BOX --- */}
-        <div className="w-full max-w-3xl relative z-10">
+        <div className="w-full max-w-5xl relative z-10">
           <form onSubmit={handleSubmit} className="relative group">
             <div className="absolute -inset-1 bg-linear-to-r from-orange-400 to-red-400 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
 
@@ -127,7 +127,7 @@ export default function Home() {
                 value={ingredients}
                 onChange={(e) => setIngredients(e.target.value)}
                 placeholder="Enter ingredients (e.g., Chicken, Garlic, Soy Sauce)..."
-                className="w-full h-32 p-6 pb-20 text-lg text-gray-800 placeholder-gray-400 bg-transparent border-none focus:ring-0 resize-none outline-none"
+                className="w-full h-36 p-6 pb-20 text-lg text-gray-800 placeholder-gray-400 bg-transparent border-none focus:ring-0 resize-none outline-none"
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
                     e.preventDefault();
