@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Heart, Clock, ChefHat, ArrowUpRight } from "lucide-react";
+import { Heart, Clock, ChefHat, ArrowUpRight, EyeIcon } from "lucide-react";
 
 interface RecipeCardProps {
   title: string;
@@ -45,18 +45,18 @@ export default function RecipeCard({
         <div className="flex items-center justify-between mt-4 ">
           <div className="flex items-center gap-4 text-xs text-gray-600 font-medium">
             <div className="flex items-center gap-1">
-              <ChefHat size={14} />
+              <EyeIcon size={16} />
               <span>{views}</span>
             </div>
             <div className="flex items-center gap-1">
-              <Clock size={14} />
+              <Clock size={16} />
               <span>{time}</span>
             </div>
           </div>
 
           <Link
             href={`/recipe/${id}`}
-            className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-orange-600 transition"
+            className="flex items-center gap-2 bg-black text-white px-4 py-2 rounded-full text-sm font-normal hover:bg-orange-600 transition"
           >
             Try Recipe <ArrowUpRight size={14} />
           </Link>

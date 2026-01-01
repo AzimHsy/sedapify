@@ -7,57 +7,60 @@ import {
   User,
   LogOut,
   Settings,
-  PlusCircle,
-  ChefHat,
-  Loader2,
+  PlusCircleIcon,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
+import { getDisplayName } from "next/dist/shared/lib/utils";
 
 export default function Navbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const supabase = createClient();
   const router = useRouter();
 
+
+
+  // 5. Added Logic: Fetch user avatar when Navbar loads
   useEffect(() => {
-    const getUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    const getAvatar = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
       setLoading(false);
-    };
 
-    getUser();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setUser(session?.user || null);
-        setLoading(false);
+      if (user) {
+        const { data } = await supabase
+          .from('users')
+          .select('avatar_url')
+          .eq('id', user.id)
+          .single();
+        
+        if (data?.avatar_url) {
+          setAvatarUrl(data.avatar_url);
+        }
       }
-    );
-
-    return () => {
-      authListener.subscription.unsubscribe();
     };
-  }, [supabase]);
+    getAvatar();
+  }, []);
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    setIsDropdownOpen(false);
-    router.refresh();
-  };
 
   const getDisplayName = () => {
-    if (!user) return "Guest";
-    return user.user_metadata?.full_name || user.email?.split("@")[0] || "User";
+    if (!user) return "";
+    return user.user_metadata?.full_name || user.email || "";
   };
 
   const getAvatarUrl = () => {
-    return user?.user_metadata?.avatar_url || null;
+    return avatarUrl || user?.user_metadata?.avatar_url;
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setAvatarUrl(null);
+    router.refresh();
   };
 
   return (
@@ -71,9 +74,6 @@ export default function Navbar() {
       <div className="hidden md:flex items-center gap-8 text-gray-700 font-medium">
         <Link href="/" className="text-orange-500 font-semibold hover:text-orange-600 transition">
           Home
-        </Link>
-        <Link href="/generate" className="hover:text-orange-500 transition">
-          Generate
         </Link>
         <Link href="/discover" className="hover:text-orange-500 transition">
           Discover
@@ -112,9 +112,9 @@ export default function Navbar() {
               className="flex items-center gap-2 focus:outline-none"
             >
               <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden border border-gray-100 shadow-sm">
-                {getAvatarUrl() ? (
+                {avatarUrl ? (
                   <img
-                    src={getAvatarUrl()}
+                    src={avatarUrl}
                     alt="Profile"
                     className="w-full h-full object-cover"
                   />
@@ -141,6 +141,22 @@ export default function Navbar() {
                 </div>
 
                 <Link
+                  href="/recipe/create"
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition"
+                  onClick={() => setIsDropdownOpen(false)}
+                >
+                  <PlusCircleIcon  size={16} /> Upload Recipe
+                </Link>
+
+                <Link
+                  href="/profile"
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition"
+                  onClick={() => setIsDropdownOpen(false)}
+                >
+                  <User  size={16} /> My Profile
+                </Link>
+
+                <Link
                   href="/profile/edit"
                   className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition"
                   onClick={() => setIsDropdownOpen(false)}
@@ -148,7 +164,7 @@ export default function Navbar() {
                   <Settings size={16} /> Edit Profile
                 </Link>
 
-                <div className="border-t border-gray-50 mt-2 pt-2">
+                <div className="border-t border-gray-50">
                   <button
                     onClick={handleSignOut}
                     className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition"
