@@ -9,6 +9,7 @@ import { Settings, Share2, User, Grid, Heart, Bookmark } from 'lucide-react'
 
 interface ProfileViewProps {
   user: any
+  currentUserId?: string // NEW PROP
   myRecipes: any[]
   savedRecipes: any[]
   likedRecipes: any[]
@@ -18,6 +19,7 @@ interface ProfileViewProps {
 export default function ProfileView({ 
   user, 
   myRecipes, 
+  currentUserId, // Receive it
   savedRecipes, 
   likedRecipes, 
   totalLikesReceived 
@@ -143,19 +145,21 @@ export default function ProfileView({
       {content.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {content.map((recipe: any) => (
-            <RecipeCard 
-              key={recipe.id}
-              id={recipe.id}
-              title={recipe.title}
-              description={recipe.description}
-              image={recipe.image_url || '/placeholder-food.jpg'} 
-              time={recipe.cooking_time}
-              views={0}
-              author={recipe.users?.username || user.username}
-              authorAvatar={recipe.users?.avatar_url || user.avatar_url}
-              // 3. Pass the Open Handler
-              onExpand={() => setSelectedRecipe(recipe)}
-            />
+             <RecipeCard 
+      key={recipe.id}
+      id={recipe.id}
+      title={recipe.title}
+      description={recipe.description}  
+      image={recipe.image_url || '/placeholder-food.jpg'} 
+      time={recipe.cooking_time}
+      views={0}
+      author={recipe.users?.username || user.username}
+      authorAvatar={recipe.users?.avatar_url || user.avatar_url}
+      // Pass IDs
+      userId={recipe.user_id}
+      currentUserId={currentUserId}
+      onExpand={() => setSelectedRecipe(recipe)}
+    />
           ))}
         </div>
       ) : (

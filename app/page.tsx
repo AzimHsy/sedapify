@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 export default async function Home() {
   const supabase = await createClient();
 
+  const { data: { user } } = await supabase.auth.getUser()
   const { data: recipes } = await supabase
     .from("recipes")
     .select(`
@@ -33,7 +34,7 @@ export default async function Home() {
 
         {/* Use the Wrapper instead of mapping directly */}
         {recipes && recipes.length > 0 ? (
-          <FeedWrapper recipes={recipes} />
+          <FeedWrapper recipes={recipes} currentUserId={user?.id} />
         ) : (
           <div className="text-center py-20 bg-white/50 rounded-3xl border border-dashed border-gray-300">
             <p className="text-gray-500 text-lg">No community recipes yet.</p>

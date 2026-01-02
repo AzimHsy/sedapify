@@ -64,6 +64,7 @@ export default async function ProfilePage() {
     <div className="min-h-screen bg-white">
       <ProfileView 
         user={{ ...userProfile, email: authUser.email }}
+        currentUserId={authUser.id} // Pass ID
         myRecipes={myRecipes || []}
         savedRecipes={savedRecipes}
         likedRecipes={likedRecipes}

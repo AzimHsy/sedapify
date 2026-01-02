@@ -4,12 +4,12 @@ import { useState } from 'react'
 import RecipeCard from './RecipeCard'
 import RecipeModal from './RecipeModal'
 
-export default function FeedWrapper({ recipes }: { recipes: any[] }) {
+// Add currentUserId to props
+export default function FeedWrapper({ recipes, currentUserId }: { recipes: any[], currentUserId?: string }) {
   const [selectedRecipe, setSelectedRecipe] = useState<any>(null)
 
   return (
     <>
-      {/* The Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {recipes.map((recipe) => (
           <RecipeCard
@@ -22,13 +22,14 @@ export default function FeedWrapper({ recipes }: { recipes: any[] }) {
             views={0}
             author={recipe.users?.username} 
             authorAvatar={recipe.users?.avatar_url}
-            // OPEN MODAL ON CLICK
+            // Pass User IDs for ownership check
+            userId={recipe.user_id}
+            currentUserId={currentUserId}
             onExpand={() => setSelectedRecipe(recipe)} 
           />
         ))}
       </div>
 
-      {/* The Modal */}
       {selectedRecipe && (
         <RecipeModal 
           recipe={selectedRecipe} 

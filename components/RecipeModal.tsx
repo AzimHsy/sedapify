@@ -169,7 +169,10 @@ export default function RecipeModal({ recipe, isOpen, onClose }: RecipeModalProp
                   Try Recipe
                </Link>
             </div>
-            <div className="px-4 pb-2 text-sm font-bold text-gray-900">123 likes</div>
+            <div className="px-4 pb-2 text-sm font-bold text-gray-900">
+  {/* Handle both Array format (Supabase default) or Object format */}
+  {recipe.likes?.[0]?.count || recipe.likes?.count || 0} likes
+</div>
             <div className="px-4 pb-4 text-xs text-gray-400 uppercase">{recipe.created_at?.split('T')[0]}</div>
 
             {/* Input */}
