@@ -48,7 +48,7 @@ export default function RecipeGenerator() {
   };
 
   return (
-    <section className="relative flex flex-col items-center justify-center px-4 pt-16 pb-24 max-w-6xl mx-auto text-center">
+    <section className="relative flex flex-col items-center justify-center px-4 pt-32 pb-24 max-w-6xl mx-auto text-center">
         <h1 className="text-5xl md:text-6xl font-bold text-gray-900 leading-[1.1] mb-6 tracking-tight">
           Experience the Future of{" "}
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-500">

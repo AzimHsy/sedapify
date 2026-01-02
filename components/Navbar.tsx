@@ -12,54 +12,54 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
-import { getDisplayName } from "next/dist/shared/lib/utils";
 
 export default function Navbar() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // 1. ADD STATE FOR USERNAME
+  const [username, setUsername] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  
   const supabase = createClient();
   const router = useRouter();
 
-
-
-  // 5. Added Logic: Fetch user avatar when Navbar loads
   useEffect(() => {
-    const getAvatar = async () => {
+    const getUserData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
-      setLoading(false);
-
+      
       if (user) {
+        // 2. UPDATE QUERY: Select 'username' AND 'avatar_url'
         const { data } = await supabase
           .from('users')
-          .select('avatar_url')
+          .select('avatar_url, username') 
           .eq('id', user.id)
           .single();
         
-        if (data?.avatar_url) {
-          setAvatarUrl(data.avatar_url);
+        if (data) {
+          if (data.avatar_url) setAvatarUrl(data.avatar_url);
+          if (data.username) setUsername(data.username); // 3. Set the username state
         }
       }
+      setLoading(false);
     };
-    getAvatar();
+    getUserData();
   }, []);
 
-
+  // 4. UPDATE DISPLAY LOGIC: Prioritize the DB username over the Auth metadata
   const getDisplayName = () => {
+    if (username) return username; // Use the updated name from DB
     if (!user) return "";
     return user.user_metadata?.full_name || user.email || "";
-  };
-
-  const getAvatarUrl = () => {
-    return avatarUrl || user?.user_metadata?.avatar_url;
   };
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setAvatarUrl(null);
+    setUsername(null);
     router.refresh();
   };
 
@@ -87,10 +87,9 @@ export default function Navbar() {
         <div className="relative group cursor-pointer flex items-center gap-1 hover:text-orange-500 transition">
           <span>Cookbook</span>
           <ChevronDown size={16} />
-          {/* Simple Hover Dropdown for Cookbook */}
           <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform translate-y-2 group-hover:translate-y-0">
-             <Link href="/cookbook/my-recipes" className="block px-4 py-2 hover:bg-orange-50 rounded-t-xl transition">My Recipes</Link>
-             <Link href="/cookbook/saved" className="block px-4 py-2 hover:bg-orange-50 rounded-b-xl transition">Saved</Link>
+             <Link href="/profile" className="block px-4 py-2 hover:bg-orange-50 rounded-t-xl transition">My Recipes</Link>
+             <Link href="/profile" className="block px-4 py-2 hover:bg-orange-50 rounded-b-xl transition">Saved</Link>
           </div>
         </div>
       </div>
