@@ -17,36 +17,37 @@ export default async function ProfilePage() {
     .single()
 
   // 3. Fetch "Your Recipes" (Created by user)
-  // CHANGE: Added filter to only show manual uploads (not AI generated)
+  // CHANGE: Join 'users' to get username/avatar for the card
   const { data: myRecipes } = await supabase
     .from('recipes')
-    .select('*')
+    .select('*, users(username, avatar_url)') 
     .eq('user_id', authUser.id)
-    .eq('is_ai_generated', false) // <--- THIS LINE FILTERS OUT AI RECIPES
+    .eq('is_ai_generated', false)
     .order('created_at', { ascending: false })
 
-  // 4. Fetch "Favourites" (Saved recipes JOIN recipes)
+  // 4. Fetch "Favourites"
+  // CHANGE: Join 'users' nested inside 'recipes'
   const { data: savedRaw } = await supabase
     .from('saved_recipes')
-    .select('recipes(*)') 
+    .select('recipes(*, users(username, avatar_url))') 
     .eq('user_id', authUser.id)
 
-  // Flatten the structure for the UI
+  // Flatten
   // @ts-ignore
   const savedRecipes = savedRaw?.map(item => item.recipes) || []
 
-  // 5. Fetch "Liked" (Likes JOIN recipes)
+  // 5. Fetch "Liked"
+  // CHANGE: Join 'users' nested inside 'recipes'
   const { data: likedRaw } = await supabase
     .from('likes')
-    .select('recipes(*)')
+    .select('recipes(*, users(username, avatar_url))')
     .eq('user_id', authUser.id)
 
-  // Flatten the structure
+  // Flatten
   // @ts-ignore
   const likedRecipes = likedRaw?.map(item => item.recipes) || []
 
   // 6. Calculate "Total Likes Received"
-  // This will now only count likes on your MANUAL recipes (which is fair!)
   const myRecipeIds = myRecipes?.map(r => r.id) || []
   
   let totalLikesReceived = 0

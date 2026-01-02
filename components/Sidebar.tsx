@@ -1,16 +1,15 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import { 
   Home, Compass, ShoppingBasket, Trophy, 
   BookOpen, PlusSquare, LogOut, User, 
-  ChefHat, Settings, ChevronDown, ChevronUp
+  ChefHat, ChevronDown, ChevronUp
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import Image from 'next/image'
-import { useRouter } from 'next/navigation'
 
 export default function Sidebar() {
   const pathname = usePathname()
@@ -21,31 +20,52 @@ export default function Sidebar() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [isCookbookOpen, setIsCookbookOpen] = useState(false)
 
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        // Fetch profile data
-        const { data } = await supabase
-          .from('users')
-          .select('username, avatar_url')
-          .eq('id', user.id)
-          .single()
-        
-        setUser({ ...user, ...data })
-        if (data?.avatar_url) setAvatarUrl(data.avatar_url)
-      }
+  // 1. Fetch Profile Data Helper Function
+  const fetchUserProfile = async (userId: string) => {
+    const { data } = await supabase
+      .from('users')
+      .select('username, avatar_url, email')
+      .eq('id', userId)
+      .single()
+    
+    if (data) {
+      setUser(data)
+      setAvatarUrl(data.avatar_url)
     }
-    getUser()
+  }
+
+  useEffect(() => {
+    // 2. Initial Fetch
+    const getInitialUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) await fetchUserProfile(user.id)
+    }
+    getInitialUser()
+
+    // 3. LISTEN FOR AUTH CHANGES (Login/Logout)
+    // This makes the sidebar update instantly without refreshing
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        await fetchUserProfile(session.user.id)
+      } else {
+        setUser(null)
+        setAvatarUrl(null)
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
+    setUser(null)
+    setAvatarUrl(null)
     router.push('/login')
     router.refresh()
   }
 
-  // Helper for active link styles
   const linkClass = (path: string) => `
     flex items-center gap-4 px-4 py-3 rounded-xl transition-all duration-200 group
     ${pathname === path 
@@ -57,7 +77,6 @@ export default function Sidebar() {
     <>
       {/* --- DESKTOP SIDEBAR --- */}
       <aside className="hidden md:flex flex-col w-64 h-screen fixed left-0 top-0 border-r border-gray-100 bg-white z-50">
-        
         {/* Logo */}
         <div className="p-6 pb-2">
       <Link href="/" className="flex w-[140px] items-center gap-2 group">
@@ -100,7 +119,6 @@ export default function Sidebar() {
               {isCookbookOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </button>
             
-            {/* Submenu */}
             {isCookbookOpen && (
               <div className="pl-12 space-y-1 mt-1">
                 <Link href="/profile" className="block py-2 text-sm text-gray-500 hover:text-orange-600 transition">
@@ -124,20 +142,23 @@ export default function Sidebar() {
         {/* User Footer */}
         <div className="p-4 border-t border-gray-100">
           {user ? (
-            <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 cursor-pointer transition">
-              <div className="relative w-10 h-10 rounded-full bg-gray-200 overflow-hidden border border-gray-100 flex-shrink-0">
-                {avatarUrl ? (
-                   <Image src={avatarUrl} alt="User" fill className="object-cover" />
-                ) : (
-                   <User className="w-full h-full p-2 text-gray-400" />
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                 <p className="text-sm font-bold text-gray-900 truncate">{user.username || 'Chef'}</p>
-                 <button onClick={handleSignOut} className="text-xs text-red-500 hover:underline flex items-center gap-1">
-                    <LogOut size={12} /> Sign out
-                 </button>
-              </div>
+            <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-gray-50 cursor-pointer transition group">
+              <Link href="/profile" className="flex items-center gap-3 flex-1 min-w-0">
+                <div className="relative w-10 h-10 rounded-full bg-gray-200 overflow-hidden border border-gray-100 flex-shrink-0">
+                    {avatarUrl ? (
+                    <Image src={avatarUrl} alt="User" fill className="object-cover" />
+                    ) : (
+                    <User className="w-full h-full p-2 text-gray-400" />
+                    )}
+                </div>
+                <div className="flex-1 min-w-0 text-left">
+                    <p className="text-sm font-bold text-gray-900 truncate">{user.username || 'Chef'}</p>
+                    <p className="text-xs text-gray-500 truncate">View Profile</p>
+                </div>
+              </Link>
+              <button onClick={handleSignOut} className="text-gray-400 hover:text-red-500 transition">
+                <LogOut size={18} />
+              </button>
             </div>
           ) : (
             <Link href="/login" className="flex items-center justify-center w-full py-3 bg-orange-500 text-white font-bold rounded-xl hover:bg-orange-600 transition">
@@ -147,7 +168,7 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {/* --- MOBILE BOTTOM BAR (TikTok Style) --- */}
+      {/* --- MOBILE BOTTOM BAR --- */}
       <nav className="md:hidden fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 z-50 flex justify-around items-center py-3 pb-safe">
         <Link href="/" className={`p-2 ${pathname === '/' ? 'text-orange-500' : 'text-gray-500'}`}>
            <Home size={24} />

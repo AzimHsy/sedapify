@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import RecipeCard from '@/components/RecipeCard'
+import RecipeModal from '@/components/RecipeModal' // 1. Import the Modal
 import { Settings, Share2, User, Grid, Heart, Bookmark } from 'lucide-react'
 
 interface ProfileViewProps {
@@ -23,6 +24,9 @@ export default function ProfileView({
 }: ProfileViewProps) {
   
   const [activeTab, setActiveTab] = useState<'recipes' | 'favourites' | 'liked'>('recipes')
+  
+  // 2. Add State for the Modal
+  const [selectedRecipe, setSelectedRecipe] = useState<any>(null)
 
   const content = {
     recipes: myRecipes,
@@ -31,9 +35,6 @@ export default function ProfileView({
   }[activeTab]
 
   return (
-    // CHANGE HERE: 
-    // Removed 'max-w-4xl mx-auto' (which centered it narrowly)
-    // Added 'w-full max-w-7xl' (to make it wide but not infinite)
     <div className="w-full max-w-7xl mx-auto pt-8 pb-20 px-6 md:px-10">
       
       {/* --- HEADER SECTION --- */}
@@ -60,7 +61,6 @@ export default function ProfileView({
           <h1 className="text-3xl font-bold text-gray-900 mb-1">{user.username || 'Chef'}</h1>
           <p className="text-gray-500 text-sm mb-5">@{user.email?.split('@')[0]}</p>
 
-          {/* Buttons */}
           <div className="flex gap-3 mb-6 relative z-10">
             <Link 
               href="/profile/edit" 
@@ -76,7 +76,6 @@ export default function ProfileView({
             </button>
           </div>
 
-          {/* Stats Row */}
           <div className="flex items-center gap-8 text-gray-900">
             <div className="flex items-center gap-1.5">
               <span className="font-bold text-xl">0</span>
@@ -92,14 +91,13 @@ export default function ProfileView({
             </div>
           </div>
 
-          {/* Bio */}
           <p className="mt-5 text-gray-700 whitespace-pre-wrap max-w-2xl leading-relaxed">
             {user.bio || "No bio yet."}
           </p>
         </div>
       </div>
 
-      {/* --- TABS NAVIGATION --- */}
+      {/* --- TABS --- */}
       <div className="flex items-center gap-10 border-t border-gray-200 mb-8">
         <button 
           onClick={() => setActiveTab('recipes')}
@@ -142,7 +140,6 @@ export default function ProfileView({
       </div>
 
       {/* --- GRID CONTENT --- */}
-      {/* Changed to 4 columns on large screens to fill space */}
       {content.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {content.map((recipe: any) => (
@@ -153,7 +150,11 @@ export default function ProfileView({
               description={recipe.description}
               image={recipe.image_url || '/placeholder-food.jpg'} 
               time={recipe.cooking_time}
-              views={0} 
+              views={0}
+              author={recipe.users?.username || user.username}
+              authorAvatar={recipe.users?.avatar_url || user.avatar_url}
+              // 3. Pass the Open Handler
+              onExpand={() => setSelectedRecipe(recipe)}
             />
           ))}
         </div>
@@ -169,6 +170,15 @@ export default function ProfileView({
             {activeTab === 'recipes' ? "Share your culinary masterpieces with the world." : "Interact with posts to see them here."}
           </p>
         </div>
+      )}
+
+      {/* 4. Render the Modal when a recipe is selected */}
+      {selectedRecipe && (
+        <RecipeModal 
+          recipe={selectedRecipe} 
+          isOpen={!!selectedRecipe} 
+          onClose={() => setSelectedRecipe(null)} 
+        />
       )}
 
     </div>
