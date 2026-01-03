@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { ArrowLeft, Clock, BarChart, ChefHat } from "lucide-react";
+import Image from "next/image";
+import { ArrowLeft, Clock, BarChart, ChefHat, User } from "lucide-react";
+import RecipeInteraction from "@/components/RecipeInteraction"; // Import the new component
 
 export default async function RecipePage({
   params,
@@ -9,44 +11,40 @@ export default async function RecipePage({
 }) {
   const { id } = await params;
 
-  // 1. Validate ID before calling Database
-  // If the ID is not a valid UUID (e.g. "undefined"), show error immediately
-  const isValidUUID =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+  // 1. Validate ID
+  const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
   if (!isValidUUID) {
-    return (
-      <ErrorDisplay
-        title="Invalid Recipe ID"
-        message={`The ID "${id}" is not valid. Please try generating a new recipe.`}
-      />
-    );
+    return <ErrorDisplay title="Invalid Recipe ID" message="The ID provided is not valid." />;
   }
 
   const supabase = await createClient();
 
+  // 2. Get Current User (To check if they liked the recipe)
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // 3. Fetch Recipe + Author Details
   const { data: recipe, error } = await supabase
     .from("recipes")
-    .select("*")
+    .select("*, users(id, username, avatar_url)") // Added 'id' to users select
     .eq("id", id)
     .single();
 
-  // 2. Debugging Log (Check your VS Code Terminal)
-  if (error) {
-    console.log("----------------ERROR DETAILS----------------");
-    console.log("Requested ID:", id);
-    console.log("Supabase Message:", error.message);
-    console.log("Supabase Details:", error.details);
-    console.log("---------------------------------------------");
+  if (error || !recipe) {
+    return <ErrorDisplay title="Recipe Not Found" message="This recipe might have been deleted or does not exist." />;
   }
 
-  if (error || !recipe) {
-    return (
-      <ErrorDisplay
-        title="Recipe Not Found"
-        message="We couldn't find this recipe in the database. It might have been deleted or you don't have permission to view it."
-      />
-    );
+  // 4. Check if Current User has Liked this recipe
+  let isLiked = false;
+  if (user) {
+    const { data: likeData } = await supabase
+      .from("likes")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("recipe_id", recipe.id)
+      .single();
+    
+    isLiked = !!likeData; // True if data exists
   }
 
   // Parse JSON data safely
@@ -59,84 +57,141 @@ export default async function RecipePage({
     : JSON.parse(recipe.instructions || "[]");
 
   return (
-    <div className="min-h-screen bg-[#FDF8F0] p-4 md:p-8 flex justify-center">
-      <div className="max-w-4xl w-full bg-white rounded-3xl shadow-xl overflow-hidden border border-orange-100">
-        {/* Header Section */}
-        <div className="bg-orange-500 p-8 md:p-12 text-white relative overflow-hidden">
-          <div className="relative z-10">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 text-orange-100 hover:text-white mb-6 transition"
-            >
-              <ArrowLeft size={20} /> Back to Generator
-            </Link>
-            <h1 className="text-4xl md:text-5xl font-extrabold mb-4 leading-tight">
-              {recipe.title}
-            </h1>
-            <p className="text-lg text-orange-100 max-w-2xl">
-              {recipe.description}
-            </p>
-
-            <div className="flex flex-wrap gap-4 mt-6">
-              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full font-medium">
-                <Clock size={18} /> {recipe.cooking_time || "30 mins"}
-              </div>
-              <div className="flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full font-medium">
-                <BarChart size={18} /> {recipe.difficulty || "Medium"}
-              </div>
-            </div>
+    <div className="min-h-screen bg-gray-50 pb-20">
+      
+      {/* --- HERO IMAGE SECTION --- */}
+      <div className="relative w-full h-[50vh] md:h-[50vh] bg-gray-900">
+        {recipe.image_url ? (
+          <Image 
+            src={recipe.image_url} 
+            alt={recipe.title} 
+            fill 
+            className="object-cover opacity-90"
+            priority
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-orange-400 to-red-600">
+            <ChefHat size={80} className="text-white/30" />
           </div>
+        )}
+        
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-          <div className="absolute top-0 right-0 -mt-10 -mr-10 opacity-10">
-            <ChefHat size={300} />
-          </div>
+        <div className="absolute top-6 left-6 z-20">
+          <Link href="/" className="flex items-center gap-2 bg-white/20 backdrop-blur-md text-white px-4 py-2 rounded-full hover:bg-white/30 transition">
+            <ArrowLeft size={20} /> <span className="font-medium">Back</span>
+          </Link>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 p-8 md:p-12">
-          {/* Ingredients Column */}
-          <div className="md:col-span-1 space-y-6">
-            <div className="bg-orange-50 p-6 rounded-2xl border border-orange-100">
-              <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                🛒 Ingredients
-              </h2>
-              <ul className="space-y-3">
-                {ingredientsList.map((item: string, index: number) => (
-                  <li
-                    key={index}
-                    className="flex items-start gap-3 text-gray-700 text-sm"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-orange-400 mt-2 shrink-0" />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
+        <div className="absolute bottom-0 left-0 w-full p-6 md:p-10 z-10 text-white max-w-7xl mx-auto">
+          <div className="flex flex-wrap gap-2 mb-4">
+            {recipe.cuisine && <span className="bg-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">{recipe.cuisine}</span>}
+            {recipe.meal_type && <span className="bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">{recipe.meal_type}</span>}
+            {recipe.dietary && <span className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">{recipe.dietary}</span>}
           </div>
 
-          {/* Instructions Column */}
-          <div className="md:col-span-2">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-              👨‍🍳 Cooking Instructions
-            </h2>
-            <div className="space-y-6">
-              {instructionsList.map((step: string, index: number) => (
-                <div key={index} className="flex gap-4 group">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-bold text-sm group-hover:bg-orange-500 group-hover:text-white transition-colors">
-                    {index + 1}
-                  </div>
-                  <p className="text-gray-600 leading-relaxed pt-1">{step}</p>
-                </div>
-              ))}
+          <h1 className="text-4xl md:text-6xl font-extrabold mb-4">
+            {recipe.title}
+          </h1>
+
+          <div className="flex flex-col md:flex-row mb-4 md:items-center gap-6 text-sm md:text-base font-medium">
+            
+            {/* CLICKABLE AUTHOR LINK */}
+            <Link href={`/profile/${recipe.user_id}`} className="flex items-center gap-3 group hover:opacity-90 transition">
+              <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative border-1 border-white transition">
+                {recipe.users?.avatar_url ? (
+                  <Image src={recipe.users.avatar_url} alt="Author" fill className="object-cover" />
+                ) : (
+                  <User className="p-2 w-full h-full text-gray-500" />
+                )}
+              </div>
+              <span>By <span className="font-bold transition">{recipe.users?.username || 'Unknown Chef'}</span></span>
+            </Link>
+
+            <div className="flex items-center gap-4 text-white/90">
+              <div className="flex items-center gap-2"><Clock size={18} /> {recipe.cooking_time || "30m"}</div>
+              <div className="flex items-center gap-2"><BarChart size={18} /> {recipe.difficulty || "Easy"}</div>
             </div>
 
-            <div className="mt-12 pt-8 border-t border-gray-100 flex justify-center">
-              <Link
-                href="/"
-                className="bg-gray-900 text-white px-8 py-4 rounded-xl font-bold hover:bg-black hover:shadow-lg transform hover:-translate-y-1 transition-all flex items-center gap-2"
-              >
-                <ChefHat size={20} /> Generate Another Recipe
-              </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* --- CONTENT SECTION --- */}
+      <div className="max-w-7xl mx-auto px-4 md:px-10 -mt-8 relative z-20">
+        <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 p-6 md:p-10">
+          
+          <div className="grid lg:grid-cols-3 gap-10">
+            
+            <div className="lg:col-span-1 space-y-8">
+              <div>
+                <h3 className="text-gray-900 font-bold text-lg mb-2">About this dish</h3>
+                <p className="text-gray-600 leading-relaxed italic border-l-4 border-orange-500 pl-4 bg-orange-50 p-4 rounded-r-lg">
+                  "{recipe.description}"
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  🛒 Ingredients
+                </h3>
+                <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100">
+                  <ul className="space-y-4">
+                    {ingredientsList.map((item: string, index: number) => (
+                      <li key={index} className="flex items-start gap-3">
+                        <div className="mt-1 min-w-[20px] h-5 rounded-full border-2 border-orange-300 flex items-center justify-center">
+                          <div className="w-2.5 h-2.5 bg-orange-500 rounded-full"></div>
+                        </div>
+                        <span className="text-gray-700 font-medium leading-tight">{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
             </div>
+
+            <div className="lg:col-span-2">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                  👨‍🍳 Preparation
+                </h3>
+                
+                {/* INSERT CLIENT COMPONENT FOR BUTTONS */}
+                <RecipeInteraction 
+                  recipeId={recipe.id} 
+                  currentUser={user} 
+                  initialIsLiked={isLiked} 
+                />
+
+              </div>
+
+              <div className="space-y-8 relative before:absolute before:left-[19px] before:top-4 before:h-full before:w-0.5 before:bg-gray-200">
+                {instructionsList.map((step: string, index: number) => (
+                  <div key={index} className="flex gap-6 relative">
+                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-lg shadow-md z-10 ring-4 ring-white">
+                      {index + 1}
+                    </div>
+                    <div className="bg-white border border-gray-100 p-5 rounded-2xl shadow-sm flex-1 hover:shadow-md transition">
+                      <p className="text-gray-700 leading-relaxed text-lg">
+                        {step}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-16 text-center">
+                <p className="text-gray-500 mb-4">Did you make this recipe?</p>
+                <Link 
+                  href="/" 
+                  className="inline-flex items-center gap-2 bg-black text-white px-8 py-3 rounded-full font-bold hover:bg-gray-800 transition transform hover:-translate-y-1"
+                >
+                  <ChefHat size={20} /> Make Something Else
+                </Link>
+              </div>
+
+            </div>
+
           </div>
         </div>
       </div>
@@ -144,11 +199,10 @@ export default async function RecipePage({
   );
 }
 
-// Helper component for errors
 function ErrorDisplay({ title, message }: { title: string; message: string }) {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#FDF8F0] p-4 text-center">
-      <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-orange-100">
+      <div className="bg-white p-8 rounded-3xl shadow-xl max-w-md w-full border border-orange-100">
         <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
           <ChefHat size={32} />
         </div>

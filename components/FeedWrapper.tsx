@@ -23,6 +23,9 @@ export default function FeedWrapper({ recipes, currentUserId }: { recipes: any[]
             author={recipe.users?.username} 
             authorAvatar={recipe.users?.avatar_url}
             // Pass User IDs for ownership check
+            cuisine={recipe.cuisine}
+            mealType={recipe.meal_type} 
+            dietary={recipe.dietary}
             userId={recipe.user_id}
             currentUserId={currentUserId}
             onExpand={() => setSelectedRecipe(recipe)} 

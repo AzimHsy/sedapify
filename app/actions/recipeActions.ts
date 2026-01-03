@@ -40,12 +40,15 @@ export async function updateRecipeAction(recipeId: string, formData: FormData) {
   const description = formData.get('description') as string
   const cooking_time = formData.get('cooking_time') as string
   const difficulty = formData.get('difficulty') as string
+  const cuisine = formData.get('cuisine') as string
+  const meal_type = formData.get('meal_type') as string
+  const dietary = formData.get('dietary') as string
   const ingredients = JSON.parse(formData.get('ingredients') as string)
   const instructions = JSON.parse(formData.get('instructions') as string)
   const imageFile = formData.get('image') as File
 
   const updates: any = {
-    title, description, cooking_time, difficulty, ingredients, instructions
+    title, description, cooking_time, difficulty, ingredients, instructions, cuisine, meal_type, dietary
   }
 
   // Handle Image Upload (Only if user selected a new one)

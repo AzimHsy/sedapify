@@ -72,6 +72,9 @@ export async function createManualRecipe(formData: FormData) {
   const description = formData.get("description") as string;
   const cooking_time = formData.get("cooking_time") as string;
   const difficulty = formData.get("difficulty") as string;
+  const cuisine = formData.get('cuisine') as string
+  const meal_type = formData.get('meal_type') as string
+  const dietary = formData.get('dietary') as string
 
   // Ingredients/Instructions come as JSON strings from the frontend
   const ingredients = JSON.parse(formData.get("ingredients") as string);
@@ -106,7 +109,10 @@ export async function createManualRecipe(formData: FormData) {
       cooking_time,
       difficulty,
       image_url: imageUrl,
-      is_ai_generated: false,
+      cuisine,
+      meal_type,
+      dietary,
+      is_ai_generated: false
     })
     .select()
     .single();

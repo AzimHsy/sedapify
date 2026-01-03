@@ -4,13 +4,13 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
-import { Mail, Lock, Loader2, ArrowRight, ChefHat } from "lucide-react";
+import { Mail, Lock, Loader2, ArrowRight, Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false); // Toggle between Login/Signup text
+  const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
   const supabase = createClient();
@@ -50,7 +50,7 @@ export default function LoginPage() {
       {/* LEFT SIDE: Image Background */}
       <div className="hidden lg:block relative h-full w-full">
         <img
-          src="https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?q=80&w=1000&auto=format&fit=crop"
+          src="https://images.unsplash.com/photo-1614442042855-e17d53875286?q=80&w=735&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
           alt="Food Background"
           className="absolute h-full w-full object-cover"
         />
@@ -68,11 +68,10 @@ export default function LoginPage() {
         <div className="w-full max-w-md bg-white p-10 rounded-2xl shadow-xl border border-orange-100">
           {/* Logo & Header */}
           <div className="text-center mb-8">
-            <Link href="/" className="inline-flex items-center gap-2 mb-4">
-              <div className="bg-orange-500 p-2 rounded-lg text-white">
-                <ChefHat size={24} />
+            <Link href="/" className="flex justify-center items-center mb-4">
+              <div className="p-2">
+                <img src="/fyp-logo.png" alt="Sedapify" />
               </div>
-              <span className="text-2xl font-bold text-gray-900">Sedapify</span>
             </Link>
             <h1 className="text-2xl font-bold text-gray-900">Welcome Back</h1>
             <p className="text-gray-500 mt-2 text-sm">
@@ -101,7 +100,7 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Password Input */}
+            {/* Password Input with Toggle */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Password
@@ -112,12 +111,20 @@ export default function LoginPage() {
                   size={20}
                 />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-4 py-3 border text-black border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
+                  className="w-full pl-10 pr-12 py-3 border text-black border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all"
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
               </div>
               <div className="flex justify-end mt-2">
                 <button
@@ -133,7 +140,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-orange-200 transition-all transform active:scale-95 flex items-center justify-center gap-2"
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl shadow-lg hover:shadow-orange-200 transition-all transform active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <Loader2 className="animate-spin" size={20} />
@@ -161,7 +168,7 @@ export default function LoginPage() {
           <button
             onClick={handleSignUp}
             disabled={loading}
-            className="w-full bg-white border-2 border-orange-100 text-orange-600 font-bold py-3 rounded-xl hover:bg-orange-50 transition-all"
+            className="w-full bg-white border-2 border-orange-100 text-orange-600 font-bold py-3 rounded-xl hover:bg-orange-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Create an Account
           </button>

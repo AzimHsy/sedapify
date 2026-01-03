@@ -21,17 +21,10 @@ export default function NavigationWrapper({ children }: { children: React.ReactN
   // CASE 2: ALL Other Pages (Home, Profile, etc.) -> Sidebar + Content
   return (
     <div className="flex min-h-screen bg-gray-50">
-      
-      {/* Fixed Left Sidebar */}
       <Sidebar />
-      
-      {/* Main Content Area */}
-      {/* md:ml-64 pushes content to the right so Sidebar doesn't cover it */}
-      {/* pb-20 adds padding at bottom for mobile bottom-bar */}
       <main className="flex-1 md:ml-64 pb-20 md:pb-0 w-full min-h-screen transition-all duration-300">
         {children}
       </main>
-      
     </div>
   )
 }

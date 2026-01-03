@@ -3,10 +3,11 @@
 import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { X, Heart, MessageCircle, Bookmark, Share2, Send, MoreHorizontal, User } from 'lucide-react'
+import { X, Heart, MessageCircle, Bookmark, Send, User } from 'lucide-react' // Removed Share2, kept Bookmark
 import { createClient } from '@/lib/supabase/client'
 import { postComment } from '@/app/actions/commentActions'
-import { formatDistanceToNow } from 'date-fns' // You might need to install date-fns: npm install date-fns
+import { toggleLike, toggleSave, toggleFollow } from '@/app/actions/interactionActions'
+import { formatDistanceToNow } from 'date-fns'
 
 interface RecipeModalProps {
   recipe: any
@@ -18,21 +19,55 @@ export default function RecipeModal({ recipe, isOpen, onClose }: RecipeModalProp
   const [comments, setComments] = useState<any[]>([])
   const [newComment, setNewComment] = useState('')
   const [loading, setLoading] = useState(false)
+  
+  // Interaction States
+  const [isLiked, setIsLiked] = useState(false)
+  const [isSaved, setIsSaved] = useState(false)
+  const [isFollowing, setIsFollowing] = useState(false)
+  const [likeCount, setLikeCount] = useState(0)
+  const [currentUser, setCurrentUser] = useState<string | null>(null)
+
   const supabase = createClient()
 
-// Prevent scrolling on the body when modal is open
   useEffect(() => {
     if (isOpen) {
-      // 1. Lock scroll when modal opens
       document.body.style.overflow = 'hidden'
       fetchComments()
+      checkInteractions()
     }
-
-    // 2. CLEANUP FUNCTION: This runs automatically when the modal closes or unmounts
     return () => {
       document.body.style.overflow = 'unset'
     }
   }, [isOpen])
+
+  // Fetch initial state (Did I like/save/follow this?)
+  const checkInteractions = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    setCurrentUser(user.id)
+
+    // Check Like
+    const { data: likeData } = await supabase
+      .from('likes').select().eq('user_id', user.id).eq('recipe_id', recipe.id).single()
+    setIsLiked(!!likeData)
+
+    // Check Save
+    const { data: saveData } = await supabase
+      .from('saved_recipes').select().eq('user_id', user.id).eq('recipe_id', recipe.id).single()
+    setIsSaved(!!saveData)
+
+    // Check Follow (Target is recipe.user_id)
+    if (recipe.user_id) {
+      const { data: followData } = await supabase
+        .from('follows').select().eq('follower_id', user.id).eq('following_id', recipe.user_id).single()
+      setIsFollowing(!!followData)
+    }
+
+    // Get live like count
+    const { count } = await supabase
+      .from('likes').select('*', { count: 'exact', head: true }).eq('recipe_id', recipe.id)
+    setLikeCount(count || 0)
+  }
 
   const fetchComments = async () => {
     const { data } = await supabase
@@ -40,22 +75,42 @@ export default function RecipeModal({ recipe, isOpen, onClose }: RecipeModalProp
       .select('*, users(username, avatar_url)')
       .eq('recipe_id', recipe.id)
       .order('created_at', { ascending: false })
-    
     if (data) setComments(data)
+  }
+
+  // --- HANDLERS ---
+  const handleLike = async () => {
+    if (!currentUser) return alert('Please login')
+    // Optimistic Update
+    setIsLiked(!isLiked)
+    setLikeCount(prev => isLiked ? prev - 1 : prev + 1)
+    await toggleLike(recipe.id)
+  }
+
+  const handleSave = async () => {
+    if (!currentUser) return alert('Please login')
+    setIsSaved(!isSaved)
+    await toggleSave(recipe.id)
+  }
+
+  const handleFollow = async () => {
+    if (!currentUser) return alert('Please login')
+    setIsFollowing(!isFollowing)
+    await toggleFollow(recipe.user_id)
   }
 
   const handlePostComment = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newComment.trim()) return
-    
     setLoading(true)
+    
     const formData = new FormData()
     formData.append('recipeId', recipe.id)
     formData.append('content', newComment)
 
     await postComment(formData)
     setNewComment('')
-    fetchComments() // Refresh comments immediately
+    fetchComments()
     setLoading(false)
   }
 
@@ -63,32 +118,24 @@ export default function RecipeModal({ recipe, isOpen, onClose }: RecipeModalProp
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-      
-      {/* Close Button */}
       <button onClick={onClose} className="absolute top-6 right-6 text-white hover:opacity-75 z-50">
         <X size={32} />
       </button>
 
-      <div className="bg-white w-full max-w-5xl h-[85vh] rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-2xl relative">
-        
+      <div className="bg-white w-full max-w-6xl h-[85vh] overflow-hidden flex flex-col md:flex-row shadow-2xl relative">
         {/* LEFT SIDE: Image */}
         <div className="w-full md:w-[60%] bg-black relative flex items-center justify-center">
           <div className="relative w-full h-full">
-            <Image 
-              src={recipe.image_url || '/placeholder-food.jpg'} 
-              alt={recipe.title} 
-              fill 
-              className="object-contain" // Ensures image isn't cropped weirdly
-            />
+            <Image src={recipe.image_url || '/placeholder-food.jpg'} alt={recipe.title} fill className="object-contain" />
           </div>
         </div>
 
         {/* RIGHT SIDE: Content */}
-        <div className="w-full md:w-[40%] flex flex-col h-full bg-white">
+        <div className="w-full md:w-[40%] flex p-2 flex-col h-full bg-white">
           
           {/* Header */}
           <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-            <div className="flex items-center gap-3">
+            <Link href={`/profile/${recipe.user_id}`} className="flex items-center gap-3 hover:opacity-80 transition">
               <div className="w-10 h-10 rounded-full bg-gray-100 relative overflow-hidden">
                 {recipe.users?.avatar_url ? (
                   <Image src={recipe.users.avatar_url} alt="User" fill className="object-cover" />
@@ -100,37 +147,46 @@ export default function RecipeModal({ recipe, isOpen, onClose }: RecipeModalProp
                 <p className="font-bold text-sm text-gray-900">{recipe.users?.username || 'Chef'}</p>
                 <p className="text-xs text-gray-500">Original Recipe</p>
               </div>
-            </div>
-            <button className="bg-orange-500 text-white text-xs font-bold px-4 py-1.5 rounded-full hover:bg-orange-600 transition">
-              Follow
-            </button>
+            </Link>
+            
+            {/* Follow Button (Hide if self) */}
+            {currentUser !== recipe.user_id && (
+              <button 
+                onClick={handleFollow}
+                className={`text-sm font-normal px-8 py-2 rounded-full transition ${
+                  isFollowing 
+                    ? 'bg-gray-100 text-gray-900 border border-gray-200' 
+                    : 'bg-orange-500 text-white hover:bg-orange-600'
+                }`}
+              >
+                {isFollowing ? 'Following' : 'Follow'}
+              </button>
+            )}
           </div>
 
-          {/* Scrollable Area: Description & Comments */}
+          {/* Comments Area */}
           <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-            
-            {/* Caption */}
             <div className="mb-6">
-                <h2 className="font-bold text-xl mb-2">{recipe.title}</h2>
-                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
-                  {recipe.description}
-                </p>
-                <div className="flex flex-wrap gap-2 mt-3">
-                    <span className="text-xs text-blue-500 font-medium">#Sedapify</span>
-                    <span className="text-xs text-blue-500 font-medium">#MasakanPanas</span>
-                </div>
+                <div className="flex flex-wrap gap-2 mt-4 mb-4">
+               {recipe.cuisine && (
+                 <span className="bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full">{recipe.cuisine}</span>
+               )}
+               {recipe.meal_type && (
+                 <span className="bg-blue-50 text-blue-600 text-xs font-bold px-3 py-1 rounded-full">{recipe.meal_type}</span>
+               )}
+               {recipe.dietary && (
+                 <span className="bg-green-50 text-green-600 text-xs font-bold px-3 py-1 rounded-full">{recipe.dietary}</span>
+               )}
             </div>
-
-            {/* Comments List */}
+                <h2 className="font-bold text-xl mb-2">{recipe.title}</h2>
+                <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{recipe.description}</p>
+            </div>
             <div className="space-y-4">
-              <h3 className="text-sm font-bold text-gray-900 border-b pb-2 mb-2">Comments ({comments.length})</h3>
-              
-              {comments.length === 0 ? (
-                <p className="text-center text-gray-400 text-sm py-4">No comments yet. Be the first!</p>
-              ) : (
-                comments.map((comment) => (
-                  <div key={comment.id} className="flex gap-3 items-start">
-                    <div className="w-8 h-8 rounded-full bg-gray-100 relative overflow-hidden flex-shrink-0">
+              <h3 className="text-sm font-bold text-gray-900 border-b border-gray-400 pb-2 mb-2">Comments ({comments.length})</h3>
+              {comments.map((comment) => (
+                <div key={comment.id} className="flex gap-3 items-start">
+                   {/* Comment Item UI (Same as before) */}
+                   <div className="w-8 h-8 rounded-full bg-gray-100 relative overflow-hidden flex-shrink-0">
                       {comment.users?.avatar_url ? (
                          <Image src={comment.users.avatar_url} alt="User" fill className="object-cover" />
                       ) : (
@@ -143,41 +199,42 @@ export default function RecipeModal({ recipe, isOpen, onClose }: RecipeModalProp
                         <span className="text-gray-700">{comment.content}</span>
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
-                        {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
+                        {comment.created_at ? formatDistanceToNow(new Date(comment.created_at), { addSuffix: true }) : 'Just now'}
                       </p>
                     </div>
-                  </div>
-                ))
-              )}
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Footer: Actions & Input */}
+          {/* Footer Actions */}
           <div className="border-t border-gray-100 bg-white">
-            
-            {/* Actions Bar */}
             <div className="p-4 pb-2 flex items-center justify-between">
                <div className="flex items-center gap-4 text-gray-700">
-                  <button className="hover:text-red-500 transition"><Heart size={26} /></button>
+                  {/* LIKE BUTTON */}
+                  <button onClick={handleLike} className={`transition ${isLiked ? 'text-red-500' : 'hover:text-red-500'}`}>
+                    <Heart size={26} fill={isLiked ? "currentColor" : "none"} />
+                  </button>
+                  
                   <button className="hover:text-blue-500 transition"><MessageCircle size={26} /></button>
-                  <button className="hover:text-orange-500 transition"><Share2 size={26} /></button>
+                  
+                  {/* SAVE BUTTON (Replaced Share) */}
+                  <button onClick={handleSave} className={`transition ${isSaved ? 'text-orange-500' : 'hover:text-orange-500'}`}>
+                    <Bookmark size={26} fill={isSaved ? "currentColor" : "none"} />
+                  </button>
                </div>
                <Link 
                   href={`/recipe/${recipe.id}`}
-                  className="flex items-center gap-1 bg-black text-white px-4 py-2 rounded-full text-xs font-bold hover:bg-gray-800 transition"
+                  className="flex items-center gap-1 bg-black text-white px-8 py-3 rounded-full text-sm font-normal hover:bg-gray-800 transition"
                 >
                   Try Recipe
                </Link>
             </div>
-            <div className="px-4 pb-2 text-sm font-bold text-gray-900">
-  {/* Handle both Array format (Supabase default) or Object format */}
-  {recipe.likes?.[0]?.count || recipe.likes?.count || 0} likes
-</div>
+            <div className="px-4 pb-2 text-sm font-bold text-gray-900">{likeCount} likes</div>
             <div className="px-4 pb-4 text-xs text-gray-400 uppercase">{recipe.created_at?.split('T')[0]}</div>
 
-            {/* Input */}
+            {/* Comment Input (Same as before) */}
             <form onSubmit={handlePostComment} className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50">
-              <div className="text-2xl cursor-pointer hover:scale-110 transition">😊</div>
               <input 
                 type="text" 
                 value={newComment}
@@ -185,16 +242,9 @@ export default function RecipeModal({ recipe, isOpen, onClose }: RecipeModalProp
                 placeholder="Add a comment..." 
                 className="flex-1 bg-transparent border-none focus:ring-0 text-sm outline-none"
               />
-              <button 
-                type="submit" 
-                disabled={loading || !newComment.trim()}
-                className="text-blue-500 font-bold text-sm disabled:opacity-50 hover:text-blue-600"
-              >
-                Post
-              </button>
+              <button type="submit" disabled={loading} className="text-blue-500 font-bold text-sm">Post</button>
             </form>
           </div>
-
         </div>
       </div>
     </div>
