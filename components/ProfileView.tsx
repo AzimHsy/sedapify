@@ -6,7 +6,7 @@ import Link from 'next/link'
 import RecipeCard from '@/components/RecipeCard'
 import RecipeModal from '@/components/RecipeModal'
 import FollowListModal from '@/components/FollowListModal'
-import { Settings, Share2, User, Grid, Heart, Bookmark } from 'lucide-react'
+import { Settings, Share2, User, Grid, Heart, Bookmark, Sparkles, List } from 'lucide-react' // Add Sparkles
 import { toggleFollow } from '@/app/actions/interactionActions'
 
 interface ProfileViewProps {
@@ -106,12 +106,20 @@ export default function ProfileView({
         </div>
       </div>
 
-      {/* TABS */}
       <div className="flex items-center gap-10 border-t border-gray-200 mb-8">
-        <button onClick={() => setActiveTab('recipes')} className={`flex items-center gap-2 py-4 relative transition-colors ${activeTab === 'recipes' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600'}`}>
-          <Grid size={18} /><span className="font-bold text-xs uppercase tracking-widest">Recipes</span>
-          {activeTab === 'recipes' && <div className="absolute top-0 left-0 w-full h-0.5 bg-gray-900"></div>}
+        
+        {/* CHANGED TAB: RECIPES -> GENERATED */}
+        <button 
+          onClick={() => setActiveTab('recipes')} 
+          className={`flex items-center gap-2 py-4 relative transition-colors ${
+            activeTab === 'recipes' ? 'text-orange-600' : 'text-gray-400 hover:text-gray-600'
+          }`}
+        >
+          <List size={18} /> {/* AI Icon */}
+          <span className="font-bold text-xs uppercase tracking-widest">My Recipes</span>
+          {activeTab === 'recipes' && <div className="absolute top-0 left-0 w-full h-0.5 bg-orange-600"></div>}
         </button>
+
         {isMyProfile && (
           <>
             <button onClick={() => setActiveTab('favourites')} className={`flex items-center gap-2 py-4 relative transition-colors ${activeTab === 'favourites' ? 'text-gray-900' : 'text-gray-400 hover:text-gray-600'}`}>
@@ -142,6 +150,7 @@ export default function ProfileView({
             cuisine={recipe.cuisine}
             mealType={recipe.meal_type}
             dietary={recipe.dietary}
+            isAiGenerated={recipe.is_ai_generated}
             userId={recipe.user_id}
             currentUserId={currentUserId}
             onExpand={() => setSelectedRecipe(recipe)}

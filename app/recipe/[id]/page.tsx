@@ -1,8 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Clock, BarChart, ChefHat, User } from "lucide-react";
-import RecipeInteraction from "@/components/RecipeInteraction"; // Import the new component
+import { ArrowLeft, Clock, BarChart, ChefHat, User, Sparkles } from "lucide-react";
+import RecipeInteraction from "@/components/RecipeInteraction";
+import RecipeCard from "@/components/RecipeCard"; 
 
 export default async function RecipePage({
   params,
@@ -13,20 +14,19 @@ export default async function RecipePage({
 
   // 1. Validate ID
   const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-
   if (!isValidUUID) {
     return <ErrorDisplay title="Invalid Recipe ID" message="The ID provided is not valid." />;
   }
 
   const supabase = await createClient();
 
-  // 2. Get Current User (To check if they liked the recipe)
+  // 2. Get Current User
   const { data: { user } } = await supabase.auth.getUser();
 
-  // 3. Fetch Recipe + Author Details
+  // 3. Fetch Main Recipe + Author Details
   const { data: recipe, error } = await supabase
     .from("recipes")
-    .select("*, users(id, username, avatar_url)") // Added 'id' to users select
+    .select("*, users(id, username, avatar_url)")
     .eq("id", id)
     .single();
 
@@ -34,18 +34,34 @@ export default async function RecipePage({
     return <ErrorDisplay title="Recipe Not Found" message="This recipe might have been deleted or does not exist." />;
   }
 
-  // 4. Check if Current User has Liked this recipe
+  // 4. Check Interaction Status (Like & Save)
   let isLiked = false;
+  let isSaved = false;
+
   if (user) {
-    const { data: likeData } = await supabase
-      .from("likes")
-      .select("id")
-      .eq("user_id", user.id)
-      .eq("recipe_id", recipe.id)
-      .single();
+    const [likeResponse, saveResponse] = await Promise.all([
+      supabase.from("likes").select("id").eq("user_id", user.id).eq("recipe_id", recipe.id).single(),
+      supabase.from("saved_recipes").select("id").eq("user_id", user.id).eq("recipe_id", recipe.id).single()
+    ]);
     
-    isLiked = !!likeData; // True if data exists
+    isLiked = !!likeResponse.data;
+    isSaved = !!saveResponse.data;
   }
+
+  // 5. FETCH SUGGESTED RECIPES (Random + Human Only)
+  // We fetch a pool of 20 human-made recipes and shuffle them to get 4 random ones.
+  const { data: pool } = await supabase
+    .from("recipes")
+    .select("*, users(id, username, avatar_url)")
+    .neq("id", id)                 // Exclude current recipe
+    .eq("is_ai_generated", false)  // <--- EXCLUDE AI RECIPES
+    .not("image_url", "is", null)  // Ensure they have images
+    .limit(20);                    // Get a pool to choose from
+
+  // Shuffle the pool in JavaScript
+  const suggestions = pool 
+    ? pool.sort(() => 0.5 - Math.random()).slice(0, 4) 
+    : [];
 
   // Parse JSON data safely
   const ingredientsList = Array.isArray(recipe.ingredients)
@@ -96,16 +112,23 @@ export default async function RecipePage({
 
           <div className="flex flex-col md:flex-row mb-4 md:items-center gap-6 text-sm md:text-base font-medium">
             
-            {/* CLICKABLE AUTHOR LINK */}
-            <Link href={`/profile/${recipe.user_id}`} className="flex items-center gap-3 group hover:opacity-90 transition">
-              <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative border-1 border-white transition">
-                {recipe.users?.avatar_url ? (
-                  <Image src={recipe.users.avatar_url} alt="Author" fill className="object-cover" />
+            {/* If it's AI, link to Generate page. If user, link to profile. */}
+            <Link 
+              href={recipe.is_ai_generated ? '/generate' : `/profile/${recipe.user_id}`} 
+              className="flex items-center gap-3 group hover:opacity-90 transition"
+            >
+              <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden relative border-1 border-white transition flex items-center justify-center">
+                {recipe.is_ai_generated ? (
+                   <div className="bg-orange-500 w-full h-full flex items-center justify-center"><ChefHat size={20} className="text-white"/></div>
                 ) : (
-                  <User className="p-2 w-full h-full text-gray-500" />
+                   recipe.users?.avatar_url ? (
+                    <Image src={recipe.users.avatar_url} alt="Author" fill className="object-cover" />
+                  ) : (
+                    <User className="p-2 w-full h-full text-gray-500" />
+                  )
                 )}
               </div>
-              <span>By <span className="font-bold transition">{recipe.users?.username || 'Unknown Chef'}</span></span>
+              <span>By <span className="font-bold hover:underline transition">{recipe.is_ai_generated ? "Sedapify AI" : (recipe.users?.username || 'Unknown Chef')}</span></span>
             </Link>
 
             <div className="flex items-center gap-4 text-white/90">
@@ -118,7 +141,7 @@ export default async function RecipePage({
       </div>
 
       {/* --- CONTENT SECTION --- */}
-      <div className="max-w-7xl mx-auto px-4 md:px-10 -mt-8 relative z-20">
+      <div className="max-w-7xl mx-auto px-4 md:px-10 -mt-8 relative z-20 mb-16">
         <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 p-6 md:p-10">
           
           <div className="grid lg:grid-cols-3 gap-10">
@@ -156,13 +179,12 @@ export default async function RecipePage({
                   👨‍🍳 Preparation
                 </h3>
                 
-                {/* INSERT CLIENT COMPONENT FOR BUTTONS */}
                 <RecipeInteraction 
                   recipeId={recipe.id} 
                   currentUser={user} 
-                  initialIsLiked={isLiked} 
+                  initialIsLiked={isLiked}
+                  initialIsSaved={isSaved}
                 />
-
               </div>
 
               <div className="space-y-8 relative before:absolute before:left-[19px] before:top-4 before:h-full before:w-0.5 before:bg-gray-200">
@@ -191,10 +213,42 @@ export default async function RecipePage({
               </div>
 
             </div>
-
           </div>
         </div>
       </div>
+
+      {/* --- SUGGESTIONS SECTION (UPDATED: Random + No AI) --- */}
+      {suggestions && suggestions.length > 0 && (
+        <div className="max-w-7xl mx-auto px-6 md:px-10 pb-10">
+          <div className="flex items-center gap-2 mb-6">
+            <Sparkles className="text-orange-500" size={24} />
+            <h2 className="text-2xl font-bold text-gray-900">More from the Community</h2>
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {suggestions.map((item) => (
+              <RecipeCard
+                key={item.id}
+                id={item.id}
+                title={item.title}
+                description={item.description}
+                time={item.cooking_time}
+                image={item.image_url} 
+                views={0}
+                author={item.users?.username} 
+                authorAvatar={item.users?.avatar_url}
+                cuisine={item.cuisine}
+                mealType={item.meal_type} 
+                dietary={item.dietary}
+                userId={item.user_id}
+                currentUserId={user?.id}
+                isAiGenerated={item.is_ai_generated}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

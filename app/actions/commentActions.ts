@@ -26,4 +26,4 @@ export async function postComment(formData: FormData) {
 
   revalidatePath('/') // Refresh the feed
   return { success: true }
-}
+}   

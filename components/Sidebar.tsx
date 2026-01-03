@@ -79,7 +79,7 @@ export default function Sidebar() {
       <aside className="hidden md:flex flex-col w-64 h-screen fixed left-0 top-0 border-r border-gray-100 bg-white z-50">
         {/* Logo */}
         <div className="p-6 pb-2">
-      <Link href="/" className="flex w-[140px] items-center gap-2 group">
+      <Link href="/" className="flex w-[160px] items-center gap-2 group">
         <img src="/fyp-logo.png" alt="Sedapify" />
       </Link>
         </div>
@@ -119,16 +119,17 @@ export default function Sidebar() {
               {isCookbookOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </button>
             
-            {isCookbookOpen && (
-              <div className="pl-12 space-y-1 mt-1">
-                <Link href="/profile" className="block py-2 text-sm text-gray-500 hover:text-orange-600 transition">
-                  My Recipes
-                </Link>
-                <Link href="/profile" className="block py-2 text-sm text-gray-500 hover:text-orange-600 transition">
-                  Saved Collections
-                </Link>
-              </div>
-            )}
+       {isCookbookOpen && (
+  <div className="pl-12 space-y-1 mt-1">
+    {/* Update the HREF here */}
+    <Link href="/generated-recipes" className="block py-2 text-sm text-gray-500 hover:text-orange-600 transition">
+      Generated Recipes
+    </Link>
+    <Link href="/profile" className="block py-2 text-sm text-gray-500 hover:text-orange-600 transition">
+      Saved Collections
+    </Link>
+  </div>
+)}
           </div>
           
           <div className="pt-4 mt-4 border-t border-gray-100">

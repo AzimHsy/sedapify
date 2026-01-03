@@ -22,7 +22,7 @@ export default function FeedWrapper({ recipes, currentUserId }: { recipes: any[]
             views={0}
             author={recipe.users?.username} 
             authorAvatar={recipe.users?.avatar_url}
-            // Pass User IDs for ownership check
+            isAiGenerated={recipe.is_ai_generated}
             cuisine={recipe.cuisine}
             mealType={recipe.meal_type} 
             dietary={recipe.dietary}
