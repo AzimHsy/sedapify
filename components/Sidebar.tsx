@@ -6,7 +6,8 @@ import { useState, useEffect } from 'react'
 import { 
   Home, Compass, ShoppingBasket, Trophy, 
   BookOpen, PlusSquare, LogOut, User, 
-  ChefHat, ChevronDown, ChevronUp
+  ChevronDown, ChevronUp,
+  Film
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import Image from 'next/image'
@@ -94,6 +95,11 @@ export default function Sidebar() {
           <Link href="/discover" className={linkClass('/discover')}>
             <Compass size={24} />
             <span className="text-md">Discover</span>
+          </Link>
+
+          <Link href="/reels" className={linkClass('/reels')}>
+            <Film size={24} />
+            <span className="text-md">Reels</span>
           </Link>
 
           <Link href="/groceries" className={linkClass('/groceries')}>

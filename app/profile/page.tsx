@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import ProfileView from '@/components/ProfileView'
+import { id } from 'date-fns/locale'
 
 export default async function ProfilePage() {
   const supabase = await createClient()
@@ -33,6 +34,22 @@ export default async function ProfilePage() {
     .from('likes')
     .select('recipes(*, users(username, avatar_url))')
     .eq('user_id', authUser.id)
+
+  // 5. Fetch My Videos
+  const { data: myVideos } = await supabase
+    .from("cooking_videos")
+    .select("*, users(username, avatar_url), recipes(id)")
+    .eq("user_id", authUser.id)
+    .order("created_at", { ascending: false })
+
+  // 6. Fetch Saved Videos (Where saved_recipes.video_id is not null)
+  const { data: savedVideosRaw } = await supabase
+    .from("saved_recipes")
+    .select("cooking_videos(*, users(username, avatar_url), recipes(id))")
+    .eq("user_id", authUser.id)
+    .not("video_id", "is", null)
+
+  const savedVideos = savedVideosRaw?.map((item: any) => item.cooking_videos) || []
   
   // @ts-ignore
   const likedRecipes = likedRaw?.map(item => item.recipes) || []
@@ -68,7 +85,7 @@ export default async function ProfilePage() {
         savedRecipes={savedRecipes}
         likedRecipes={likedRecipes}
         totalLikesReceived={totalLikesReceived}
-        // Pass the new counts
+        myVideos={myVideos || []}
         followersCount={followersCount || 0}
         followingCount={followingCount || 0}
       />

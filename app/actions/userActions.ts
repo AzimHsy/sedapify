@@ -121,3 +121,30 @@ export async function createManualRecipe(formData: FormData) {
 
   redirect(`/recipe/${data.id}`);
 }
+
+// ... existing imports
+
+export async function completeOnboarding(formData: FormData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) return { error: "Unauthorized" };
+
+  const username = formData.get("username") as string;
+  const dietary_pref = formData.get("dietary_pref") as string;
+  const cooking_level = formData.get("cooking_level") as string;
+
+  const { error } = await supabase
+    .from("users")
+    .update({
+      username,
+      dietary_pref,
+      cooking_level,
+      onboarding_completed: true // <--- IMPORTANT FLAG
+    })
+    .eq("id", user.id);
+
+  if (error) return { error: error.message };
+
+  redirect("/"); // Now send them to Home
+}

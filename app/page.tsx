@@ -17,7 +17,7 @@ export default async function Home() {
     .limit(4);
 
   return (
-    <main className="min-h-screen bg-[url('/bg-img.png')] bg-cover bg-center">
+    <main className="min-h-screen bg-[#FDF8F0]">
       <RecipeGenerator />
 
       <section className="max-w-7xl mx-auto px-6 py-10 pb-20">

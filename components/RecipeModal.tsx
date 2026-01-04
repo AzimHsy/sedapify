@@ -177,6 +177,9 @@ export default function RecipeModal({ recipe, isOpen, onClose }: RecipeModalProp
                {recipe.dietary && (
                  <span className="bg-green-50 text-green-600 text-xs font-bold px-3 py-1 rounded-full">{recipe.dietary}</span>
                )}
+               {recipe.is_ai_generated && (
+                 <span className="bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full">AI Generated</span>
+               )}
             </div>
                 <h2 className="font-bold text-xl mb-2">{recipe.title}</h2>
                 <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{recipe.description}</p>

@@ -43,6 +43,13 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
   // @ts-ignore
   const likedRecipes = likedRaw?.map(item => item.recipes) || []
 
+  // 4 NEW. Fetch Videos
+  const { data: myVideos } = await supabase
+    .from('cooking_videos')
+    .select('*, users(username, avatar_url)')
+    .eq('user_id', id)
+    .order('created_at', { ascending: false })
+
   // 4. Counts
   const myRecipeIds = myRecipes?.map(r => r.id) || []
   let totalLikesReceived = 0
@@ -72,6 +79,7 @@ export default async function PublicProfilePage({ params }: { params: Promise<{ 
         totalLikesReceived={totalLikesReceived}
         followersCount={followersCount || 0}
         followingCount={followingCount || 0}
+        myVideos={myVideos || []}
         isFollowingInitial={isFollowing} // Pass this new prop
       />
     </div>
