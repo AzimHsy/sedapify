@@ -9,6 +9,7 @@ import FollowListModal from '@/components/FollowListModal'
 import VideoCard from '@/components/VideoCard' // Import VideoCard
 import { Share2, User, Grid, Heart, Bookmark, PlayCircle, Video } from 'lucide-react'
 import { toggleFollow } from '@/app/actions/interactionActions'
+import EditProfileModal from '@/components/EditProfileModal'
 
 interface ProfileViewProps {
   user: any
@@ -42,6 +43,7 @@ export default function ProfileView({
   
   const [isFollowing, setIsFollowing] = useState(isFollowingInitial)
   const [followModal, setFollowModal] = useState<'followers' | 'following' | null>(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
 
   const isMyProfile = currentUserId === user.id
 
@@ -84,17 +86,16 @@ export default function ProfileView({
            <div className="flex gap-3 mb-6 relative z-10 flex-wrap">
             {isMyProfile ? (
               <>
-                <Link 
-                  href="/profile/edit" 
-                  className="px-6 py-2.5 bg-gray-100 text-gray-900 font-semibold rounded-lg hover:bg-gray-200 transition"
-                >
-                  Edit profile
-                </Link>
+                 <button 
+                onClick={() => setIsEditModalOpen(true)}
+                className="px-6 py-2.5 bg-gray-100 text-gray-900 font-semibold rounded-lg cursor-pointer hover:bg-gray-200 transition"
+              >
+                Edit profile
+              </button>
                 <Link 
                   href="/video/upload" 
                   className="flex items-center gap-2 px-6 py-2.5 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition"
                 >
-                  <Video size={18} />
                   Upload Video
                 </Link>
               </>
@@ -213,6 +214,12 @@ export default function ProfileView({
       {selectedRecipe && <RecipeModal recipe={selectedRecipe} isOpen={!!selectedRecipe} onClose={() => setSelectedRecipe(null)} />}
       
       {followModal && <FollowListModal userId={user.id} type={followModal} onClose={() => setFollowModal(null)} />}
+
+      <EditProfileModal 
+        user={user} 
+        isOpen={isEditModalOpen} 
+        onClose={() => setIsEditModalOpen(false)} 
+      />
 
     </div>
   )

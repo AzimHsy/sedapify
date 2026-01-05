@@ -137,10 +137,10 @@ export default function GroceryStore({
     <div className="flex flex-col md:flex-row min-h-screen bg-gray-50">
       
       {/* SIDEBAR */}
-      <aside className="w-full md:w-64 bg-white border-r border-gray-100 p-6 md:h-screen md:sticky md:top-0 z-30 flex flex-col">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-          <span className="text-green-600">Sedap</span>Mart
-        </h1>
+      <aside className="w-full md:w-64 bg-white border-r border-gray-100 pt-2 md:h-screen md:sticky md:top-0 z-30 flex flex-col">
+        <div className="bg-white rounded-lg flex items-center justify-center shadow-lg">
+          <img src="/sedapmart-logo.png" alt="Logo" className="w-48 h-auto rounded-lg p-2" />
+        </div>
 
         <button 
             onClick={() => {
@@ -196,7 +196,7 @@ export default function GroceryStore({
       </aside>
 
       {/* PRODUCT GRID */}
-      <main className="flex-1 p-6 pb-24 md:p-10">
+      <main className="flex-1 p-6 pb-28 md:p-10">
         <div className="max-w-5xl mx-auto">
           <div className="mb-6 flex items-center justify-between">
             <div>
@@ -210,7 +210,7 @@ export default function GroceryStore({
             )}
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 mb-12 gap-4 md:gap-6">
             {filteredProducts.map((product) => {
               const qty = cart[product.id] || 0;
               return (

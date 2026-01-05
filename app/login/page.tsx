@@ -90,10 +90,10 @@ export default function LoginPage() {
         <div className="relative z-10 flex flex-col justify-between p-16 w-full">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-lg">
-              <img src="/fyp-logo.png" alt="Logo" className="w-6 h-6" />
+            <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-lg">
+              <img src="/sedapify-logo-2.png" alt="Logo" className="w-12 h-12 rounded-lg p-2" />
             </div>
-            <span className="text-2xl font-bold">Sedapify</span>
+            <span className="text-2xl italic font-bold">Sedapify</span>
           </Link>
 
           {/* Hero Text */}
@@ -212,7 +212,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-orange-500 text-white font-semibold py-3.5 rounded-lg hover:bg-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-orange-200"
+              className="w-full cursor-pointer bg-orange-500 text-white font-semibold py-3.5 rounded-lg hover:bg-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-orange-200"
             >
               {loading ? (
                 <>
@@ -235,7 +235,7 @@ export default function LoginPage() {
           {/* Google Button */}
           <button
             onClick={handleGoogleLogin}
-            className="w-full border-2 border-gray-200 bg-white text-gray-700 font-medium py-3.5 rounded-lg hover:bg-gray-50 hover:border-orange-300 transition flex items-center justify-center gap-3"
+            className="w-full border-2 cursor-pointer border-gray-200 bg-white text-gray-700 font-medium py-3.5 rounded-lg hover:bg-gray-50 hover:border-orange-300 transition flex items-center justify-center gap-3"
           >
             <img
               src="https://www.svgrepo.com/show/475656/google-color.svg"

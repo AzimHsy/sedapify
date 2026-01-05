@@ -7,7 +7,7 @@ import {
   Home, Compass, ShoppingBasket, Trophy, 
   BookOpen, PlusSquare, LogOut, User, 
   ChevronDown, ChevronUp,
-  Film
+  PlaySquare
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import Image from 'next/image'
@@ -98,7 +98,7 @@ export default function Sidebar() {
           </Link>
 
           <Link href="/reels" className={linkClass('/reels')}>
-            <Film size={24} />
+            <PlaySquare size={24} />
             <span className="text-md">Reels</span>
           </Link>
 

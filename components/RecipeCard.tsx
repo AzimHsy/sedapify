@@ -93,6 +93,7 @@ export default function RecipeCard({
         <div className="flex gap-2 mb-2 overflow-hidden">
           {cuisine && <span className="shrink-0 bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">{cuisine}</span>}
           {mealType && <span className="shrink-0 bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">{mealType}</span>}
+          {dietary && <span className="shrink-0 bg-green-50 text-green-600 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">{dietary}</span>}
         </div>
         
         <h3 className="font-bold text-lg text-gray-900 mb-1 line-clamp-1 leading-tight">{title}</h3>

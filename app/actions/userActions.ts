@@ -15,6 +15,12 @@ export async function updateProfile(formData: FormData) {
 
   const username = formData.get("username") as string;
   const bio = formData.get("bio") as string;
+  
+  // --- NEW FIELDS ADDED HERE ---
+  const dietary_pref = formData.get("dietary_pref") as string;
+  const cooking_level = formData.get("cooking_level") as string;
+  // -----------------------------
+
   const avatarFile = formData.get("avatar") as File;
 
   let avatarUrl = null;
@@ -43,6 +49,8 @@ export async function updateProfile(formData: FormData) {
   const updates: any = {
     username,
     bio,
+    dietary_pref, // Saved to DB
+    cooking_level, // Saved to DB
     updated_at: new Date().toISOString(),
   };
 
@@ -72,9 +80,9 @@ export async function createManualRecipe(formData: FormData) {
   const description = formData.get("description") as string;
   const cooking_time = formData.get("cooking_time") as string;
   const difficulty = formData.get("difficulty") as string;
-  const cuisine = formData.get('cuisine') as string
-  const meal_type = formData.get('meal_type') as string
-  const dietary = formData.get('dietary') as string
+  const cuisine = formData.get('cuisine') as string;
+  const meal_type = formData.get('meal_type') as string;
+  const dietary = formData.get('dietary') as string;
 
   // Ingredients/Instructions come as JSON strings from the frontend
   const ingredients = JSON.parse(formData.get("ingredients") as string);
@@ -122,8 +130,7 @@ export async function createManualRecipe(formData: FormData) {
   redirect(`/recipe/${data.id}`);
 }
 
-// ... existing imports
-
+// --- ONBOARDING ---
 export async function completeOnboarding(formData: FormData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -140,11 +147,11 @@ export async function completeOnboarding(formData: FormData) {
       username,
       dietary_pref,
       cooking_level,
-      onboarding_completed: true // <--- IMPORTANT FLAG
+      onboarding_completed: true // Marks user as ready
     })
     .eq("id", user.id);
 
   if (error) return { error: error.message };
 
-  redirect("/"); // Now send them to Home
+  redirect("/"); 
 }

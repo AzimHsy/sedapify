@@ -42,7 +42,7 @@ export default function VideoUploadForm({ myRecipes }: { myRecipes: any[] }) {
               <Video size={32} className="text-white" />
             </div>
             <h1 className="text-4xl font-bold text-gray-900 mb-3">
-              Upload Chef Short
+              Upload Chef Videos
             </h1>
             <p className="text-lg text-gray-600">
               Share your cooking process with the community
