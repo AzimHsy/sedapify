@@ -6,19 +6,22 @@ import Sidebar from '@/components/Sidebar'
 export default function NavigationWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   
-  // 1. Define paths where NO menu should appear (Login/Signup)
+  // 1. Check for Auth Pages
   const isAuthPage = pathname === '/login' || pathname === '/signup'
+  
+  // 2. Check for Admin Pages (New Check)
+  const isAdminPage = pathname?.startsWith('/admin')
 
-  // CASE 1: Login Page -> Return ONLY content (No Sidebar)
-  if (isAuthPage) {
+  // CASE 1: Auth Pages OR Admin Pages -> Return ONLY content (No Regular Sidebar)
+  if (isAuthPage || isAdminPage) {
     return (
-      <main className="min-h-screen bg-white">
+      <main className="min-h-screen">
         {children}
       </main>
     )
   }
 
-  // CASE 2: ALL Other Pages (Home, Profile, etc.) -> Sidebar + Content
+  // CASE 2: Regular User Pages -> Sidebar + Content
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
