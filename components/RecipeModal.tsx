@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom' // <--- 1. Import Portal
 import Image from 'next/image'
 import Link from 'next/link'
-import { X, Heart, MessageCircle, Bookmark, Send, User } from 'lucide-react' // Removed Share2, kept Bookmark
+import { usePathname } from 'next/navigation' // <--- 2. Import Pathname
+import { X, Heart, MessageCircle, Bookmark, Send, User } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { postComment } from '@/app/actions/commentActions'
 import { toggleLike, toggleSave, toggleFollow } from '@/app/actions/interactionActions'
@@ -26,10 +28,14 @@ export default function RecipeModal({ recipe, isOpen, onClose }: RecipeModalProp
   const [isFollowing, setIsFollowing] = useState(false)
   const [likeCount, setLikeCount] = useState(0)
   const [currentUser, setCurrentUser] = useState<string | null>(null)
-
+  
+  // Portal State
+  const [mounted, setMounted] = useState(false)
+  const pathname = usePathname()
   const supabase = createClient()
 
   useEffect(() => {
+    setMounted(true) // Helper for Portal
     if (isOpen) {
       document.body.style.overflow = 'hidden'
       fetchComments()
@@ -40,32 +46,23 @@ export default function RecipeModal({ recipe, isOpen, onClose }: RecipeModalProp
     }
   }, [isOpen])
 
-  // Fetch initial state (Did I like/save/follow this?)
   const checkInteractions = async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
     setCurrentUser(user.id)
 
-    // Check Like
-    const { data: likeData } = await supabase
-      .from('likes').select().eq('user_id', user.id).eq('recipe_id', recipe.id).single()
+    const { data: likeData } = await supabase.from('likes').select().eq('user_id', user.id).eq('recipe_id', recipe.id).single()
     setIsLiked(!!likeData)
 
-    // Check Save
-    const { data: saveData } = await supabase
-      .from('saved_recipes').select().eq('user_id', user.id).eq('recipe_id', recipe.id).single()
+    const { data: saveData } = await supabase.from('saved_recipes').select().eq('user_id', user.id).eq('recipe_id', recipe.id).single()
     setIsSaved(!!saveData)
 
-    // Check Follow (Target is recipe.user_id)
     if (recipe.user_id) {
-      const { data: followData } = await supabase
-        .from('follows').select().eq('follower_id', user.id).eq('following_id', recipe.user_id).single()
+      const { data: followData } = await supabase.from('follows').select().eq('follower_id', user.id).eq('following_id', recipe.user_id).single()
       setIsFollowing(!!followData)
     }
 
-    // Get live like count
-    const { count } = await supabase
-      .from('likes').select('*', { count: 'exact', head: true }).eq('recipe_id', recipe.id)
+    const { count } = await supabase.from('likes').select('*', { count: 'exact', head: true }).eq('recipe_id', recipe.id)
     setLikeCount(count || 0)
   }
 
@@ -78,10 +75,8 @@ export default function RecipeModal({ recipe, isOpen, onClose }: RecipeModalProp
     if (data) setComments(data)
   }
 
-  // --- HANDLERS ---
   const handleLike = async () => {
     if (!currentUser) return alert('Please login')
-    // Optimistic Update
     setIsLiked(!isLiked)
     setLikeCount(prev => isLiked ? prev - 1 : prev + 1)
     await toggleLike(recipe.id)
@@ -114,10 +109,15 @@ export default function RecipeModal({ recipe, isOpen, onClose }: RecipeModalProp
     setLoading(false)
   }
 
-  if (!isOpen) return null
+  // 3. Logic to hide "Try Recipe"
+  const isCurrentPage = pathname === `/recipe/${recipe.id}`
 
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+  // 4. Return null if not open or not mounted (SSR fix)
+  if (!isOpen || !mounted) return null
+
+  // 5. Render via Portal (Directly into body, skipping all parent z-index issues)
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <button onClick={onClose} className="absolute top-6 right-6 text-white hover:opacity-75 z-50">
         <X size={32} />
       </button>
@@ -133,7 +133,6 @@ export default function RecipeModal({ recipe, isOpen, onClose }: RecipeModalProp
         {/* RIGHT SIDE: Content */}
         <div className="w-full md:w-[40%] flex p-2 flex-col h-full bg-white">
           
-          {/* Header */}
           <div className="p-4 border-b border-gray-100 flex items-center justify-between">
             <Link href={`/profile/${recipe.user_id}`} className="flex items-center gap-3 hover:opacity-80 transition">
               <div className="w-10 h-10 rounded-full bg-gray-100 relative overflow-hidden">
@@ -149,7 +148,6 @@ export default function RecipeModal({ recipe, isOpen, onClose }: RecipeModalProp
               </div>
             </Link>
             
-            {/* Follow Button (Hide if self) */}
             {currentUser !== recipe.user_id && (
               <button 
                 onClick={handleFollow}
@@ -164,22 +162,13 @@ export default function RecipeModal({ recipe, isOpen, onClose }: RecipeModalProp
             )}
           </div>
 
-          {/* Comments Area */}
           <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
             <div className="mb-6">
                 <div className="flex flex-wrap gap-2 mt-4 mb-4">
-               {recipe.cuisine && (
-                 <span className="bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full">{recipe.cuisine}</span>
-               )}
-               {recipe.meal_type && (
-                 <span className="bg-blue-50 text-blue-600 text-xs font-bold px-3 py-1 rounded-full">{recipe.meal_type}</span>
-               )}
-               {recipe.dietary && (
-                 <span className="bg-green-50 text-green-600 text-xs font-bold px-3 py-1 rounded-full">{recipe.dietary}</span>
-               )}
-               {recipe.is_ai_generated && (
-                 <span className="bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full">AI Generated</span>
-               )}
+               {recipe.cuisine && <span className="bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full">{recipe.cuisine}</span>}
+               {recipe.meal_type && <span className="bg-blue-50 text-blue-600 text-xs font-bold px-3 py-1 rounded-full">{recipe.meal_type}</span>}
+               {recipe.dietary && <span className="bg-green-50 text-green-600 text-xs font-bold px-3 py-1 rounded-full">{recipe.dietary}</span>}
+               {recipe.is_ai_generated && <span className="bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full">AI Generated</span>}
             </div>
                 <h2 className="font-bold text-xl mb-2">{recipe.title}</h2>
                 <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">{recipe.description}</p>
@@ -188,7 +177,6 @@ export default function RecipeModal({ recipe, isOpen, onClose }: RecipeModalProp
               <h3 className="text-sm font-bold text-gray-900 border-b border-gray-400 pb-2 mb-2">Comments ({comments.length})</h3>
               {comments.map((comment) => (
                 <div key={comment.id} className="flex gap-3 items-start">
-                   {/* Comment Item UI (Same as before) */}
                    <div className="w-8 h-8 rounded-full bg-gray-100 relative overflow-hidden flex-shrink-0">
                       {comment.users?.avatar_url ? (
                          <Image src={comment.users.avatar_url} alt="User" fill className="object-cover" />
@@ -210,33 +198,29 @@ export default function RecipeModal({ recipe, isOpen, onClose }: RecipeModalProp
             </div>
           </div>
 
-          {/* Footer Actions */}
           <div className="border-t border-gray-100 bg-white">
             <div className="p-4 pb-2 flex items-center justify-between">
                <div className="flex items-center gap-4 text-gray-700">
-                  {/* LIKE BUTTON */}
                   <button onClick={handleLike} className={`transition ${isLiked ? 'text-red-500' : 'hover:text-red-500'}`}>
                     <Heart size={26} fill={isLiked ? "currentColor" : "none"} />
                   </button>
-                  
                   <button className="hover:text-blue-500 transition"><MessageCircle size={26} /></button>
-                  
-                  {/* SAVE BUTTON (Replaced Share) */}
                   <button onClick={handleSave} className={`transition ${isSaved ? 'text-orange-500' : 'hover:text-orange-500'}`}>
                     <Bookmark size={26} fill={isSaved ? "currentColor" : "none"} />
                   </button>
                </div>
-               <Link 
-                  href={`/recipe/${recipe.id}`}
-                  className="flex items-center gap-1 bg-black text-white px-8 py-3 rounded-full text-sm font-normal hover:bg-gray-800 transition"
-                >
-                  Try Recipe
-               </Link>
+               {!isCurrentPage && (
+                   <Link 
+                      href={`/recipe/${recipe.id}`}
+                      className="flex items-center gap-1 bg-black text-white px-8 py-3 rounded-full text-sm font-normal hover:bg-gray-800 transition"
+                    >
+                      Try Recipe
+                   </Link>
+               )}
             </div>
             <div className="px-4 pb-2 text-sm font-bold text-gray-900">{likeCount} likes</div>
             <div className="px-4 pb-4 text-xs text-gray-400 uppercase">{recipe.created_at?.split('T')[0]}</div>
 
-            {/* Comment Input (Same as before) */}
             <form onSubmit={handlePostComment} className="border-t border-gray-100 p-3 flex items-center gap-2 bg-gray-50">
               <input 
                 type="text" 
@@ -250,6 +234,7 @@ export default function RecipeModal({ recipe, isOpen, onClose }: RecipeModalProp
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

@@ -1,7 +1,8 @@
 import Link from 'next/link'
-import { LayoutDashboard, ShoppingBag, Package, LogOut, ArrowLeft } from 'lucide-react'
+import { LayoutDashboard, ShoppingBag, Package, ArrowLeft, ChefHat, Users, Video, Settings, BarChart3 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import AdminSidebarClient from '@/components/AdminSidebarClient'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   // Protect Route
@@ -12,34 +13,28 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
   if (profile?.role !== 'admin') redirect('/')
 
+  const navItems = [
+    { href: '/admin', icon: 'LayoutDashboard', label: 'Dashboard' },
+    { href: '/admin/orders', icon: 'ShoppingBag', label: 'Orders' },
+    { href: '/admin/products', icon: 'Package', label: 'Inventory' },
+    { href: '/admin/recipes', icon: 'ChefHat', label: 'Recipes' },
+    { href: '/admin/videos', icon: 'Video', label: 'Videos' },
+    { href: '/admin/users', icon: 'Users', label: 'Users' },
+    { href: '/admin/analytics', icon: 'BarChart3', label: 'Analytics' },
+    { href: '/admin/settings', icon: 'Settings', label: 'Settings' },
+  ]
+
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      {/* Admin Sidebar */}
-      <aside className="w-64 bg-gray-900 text-white flex flex-col fixed h-full z-50">
-        <div className="p-6">
-          <h1 className="text-2xl font-bold text-orange-500">Admin Panel</h1>
-          <p className="text-gray-400 text-xs">Sedapify Management</p>
-        </div>
-        
-        <nav className="flex-1 px-4 space-y-2">
-          <Link href="/admin" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition">
-            <LayoutDashboard size={20} /> Dashboard
-          </Link>
-          <Link href="/admin/orders" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition">
-            <ShoppingBag size={20} /> Orders
-          </Link>
-          <Link href="/admin/products" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition">
-            <Package size={20} /> Inventory
-          </Link>
-          <Link href="/" className="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800 transition mt-10 text-orange-400">
-            <ArrowLeft size={20} /> Back to App
-          </Link>
-        </nav>
-      </aside>
+    <div className="min-h-screen bg-[#FDF8F0] flex">
+      
+      {/* Admin Sidebar - Use Client Component for pathname detection */}
+      <AdminSidebarClient navItems={navItems} userEmail={user.email} />
 
       {/* Main Content */}
-      <main className="flex-1 ml-64 p-8">
-        {children}
+      <main className="flex-1 ml-64">
+        <div className="p-8">
+          {children}
+        </div>
       </main>
     </div>
   )

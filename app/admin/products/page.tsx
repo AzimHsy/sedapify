@@ -1,59 +1,55 @@
 import { createClient } from '@/lib/supabase/server'
-import { deleteProduct } from '@/app/actions/adminActions'
-import { Trash2 } from 'lucide-react'
-import AdminProductForm from '@/components/AdminProductForm' // <--- IMPORT THIS
+import AdminProductForm from '@/components/AdminProductForm'
+import ProductFilters from '@/components/ProductFilters'
+import AdminProductList from '@/components/AdminProductList'
 
-export default async function AdminProductsPage() {
+// Define props to receive searchParams (URL query strings)
+export default async function AdminProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; cat?: string }>
+}) {
+  const params = await searchParams // Next.js 15 requirement
+  const query = params.q || ''
+  const category = params.cat || ''
+
   const supabase = await createClient()
   
-  // Fetch data
-  const { data: products } = await supabase.from('products').select('*').order('created_at', { ascending: false })
-  const { data: shops } = await supabase.from('shops').select('id, name') // Only need id and name for dropdown
+  // 1. Start Query
+  let dbQuery = supabase
+    .from('products')
+    .select('*')
+    .order('created_at', { ascending: false })
+
+  // 2. Apply Filters if they exist
+  if (query) {
+    dbQuery = dbQuery.ilike('name', `%${query}%`) // Case-insensitive search
+  }
+  if (category && category !== 'All') {
+    dbQuery = dbQuery.eq('category', category)
+  }
+
+  // 3. Execute Query
+  const { data: products } = await dbQuery
+  const { data: shops } = await supabase.from('shops').select('id, name')
 
   return (
     <div className="grid lg:grid-cols-3 gap-8">
       
-      {/* LEFT: Product List */}
+      {/* LEFT: Product List & Filters */}
       <div className="lg:col-span-2 space-y-6">
-        <h1 className="text-2xl font-bold">Current Inventory</h1>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <table className="w-full text-left">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="p-4 text-sm">Product</th>
-                <th className="p-4 text-sm">Price</th>
-                <th className="p-4 text-sm">Category</th>
-                <th className="p-4 text-sm">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {products?.map((product) => (
-                <tr key={product.id}>
-                  <td className="p-4 font-medium flex items-center gap-3">
-                     {/* Optional: Show tiny image preview */}
-                     {product.image_url && <img src={product.image_url} className="w-8 h-8 rounded object-cover bg-gray-100" />}
-                     {product.name}
-                  </td>
-                  <td className="p-4 text-gray-600">RM {product.price}</td>
-                  <td className="p-4 text-xs text-gray-500">{product.category}</td>
-                  <td className="p-4">
-                    <form action={async () => {
-                      'use server'
-                      await deleteProduct(product.id)
-                    }}>
-                      <button className="text-red-500 hover:bg-red-50 p-2 rounded transition">
-                        <Trash2 size={16} />
-                      </button>
-                    </form>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="flex justify-between items-center">
+             <h1 className="text-2xl font-bold">Inventory</h1>
         </div>
+
+        {/* SEARCH & FILTER COMPONENT */}
+        <ProductFilters />
+
+        {/* LIST COMPONENT (With Edit Modal built-in) */}
+        <AdminProductList products={products || []} shops={shops || []} />
       </div>
 
-      {/* RIGHT: Add Product Form (Using the Client Component) */}
+      {/* RIGHT: Add Product Form */}
       <div>
         <AdminProductForm shops={shops || []} />
       </div>

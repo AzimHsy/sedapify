@@ -4,11 +4,12 @@ import { updateRecipeAction } from '@/app/actions/recipeActions'
 import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Minus, Upload, Loader2, Save, ArrowLeft, ChefHat, Clock, Flame, Image as ImageIcon, List, BookOpen, Tag } from 'lucide-react'
+import { Plus, Minus, Upload, Loader2, Save, ArrowLeft, ChefHat, Clock, Flame, Image as ImageIcon, List, BookOpen, Tag, Mic } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { SmartInput, SmartTextarea } from '@/components/SmartInputs' // <--- IMPORT THIS
 
-// DEFINITIONS (Same as Create Page)
+// DEFINITIONS
 const CUISINES = ["Malaysian", "Western", "Chinese", "Korean", "Japanese", "Indian", "Fusion"]
 const MEALS = ["Breakfast", "Lunch", "Dinner", "Snack", "Dessert"]
 const DIETS = ["Halal", "Vegetarian", "Vegan", "Low-carb", "High-protein"]
@@ -22,7 +23,7 @@ export default function EditRecipe() {
   const [saving, setSaving] = useState(false)
   const [defaultData, setDefaultData] = useState<any>(null)
   
-  // NEW STATES FOR TAGS
+  // Tag States
   const [selectedCuisine, setSelectedCuisine] = useState("")
   const [selectedMeal, setSelectedMeal] = useState("")
   const [selectedDiet, setSelectedDiet] = useState("")
@@ -52,7 +53,7 @@ export default function EditRecipe() {
       setInstructions(Array.isArray(data.instructions) ? data.instructions : JSON.parse(data.instructions))
       setImagePreview(data.image_url)
       
-      // LOAD EXISTING TAGS (Handle null values)
+      // LOAD EXISTING TAGS
       setSelectedCuisine(data.cuisine || "")
       setSelectedMeal(data.meal_type || "")
       setSelectedDiet(data.dietary || "")
@@ -78,43 +79,6 @@ export default function EditRecipe() {
     }
   }
 
-  // ENHANCED TAG COMPONENT (Same as Create Page)
-  const TagSelector = ({ title, options, selected, setSelected, icon: Icon }: any) => (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        {Icon && <Icon size={18} className="text-orange-600" />}
-        <label className="block font-bold text-gray-800">{title}</label>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {options.map((opt: string) => {
-          const isSelected = selected === opt
-          return (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => setSelected(isSelected ? "" : opt)}
-              style={isSelected ? {
-                background: 'linear-gradient(to right, #f97316, #ea580c)',
-                color: 'white',
-                borderColor: '#ea580c',
-                transform: 'scale(1.05)'
-              } : {}}
-              className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 border-2 ${
-                isSelected
-                  ? "shadow-lg"
-                  : "bg-white text-gray-700 border-gray-200 hover:border-orange-400 hover:text-orange-600 hover:shadow-md hover:bg-orange-50"
-              }`}
-            >
-              {opt}
-              {isSelected && <span className="ml-1.5">✓</span>}
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-
-  // 2. Handle Update
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setSaving(true)
@@ -126,7 +90,6 @@ export default function EditRecipe() {
     formData.set('ingredients', JSON.stringify(cleanIngredients))
     formData.set('instructions', JSON.stringify(cleanInstructions))
 
-    // APPEND NEW TAGS TO FORM DATA
     formData.set('cuisine', selectedCuisine)
     formData.set('meal_type', selectedMeal)
     formData.set('dietary', selectedDiet)
@@ -141,6 +104,36 @@ export default function EditRecipe() {
       router.refresh()
     }
   }
+
+  // Tag Component
+  const TagSelector = ({ title, options, selected, setSelected, icon: Icon }: any) => (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        {Icon && <Icon size={18} className="text-orange-600" />}
+        <label className="block font-bold text-gray-800">{title}</label>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt: string) => {
+          const isSelected = selected === opt
+          return (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => setSelected(isSelected ? "" : opt)}
+              className={`px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 border-2 ${
+                isSelected
+                  ? "bg-orange-500 text-white border-orange-500 shadow-md"
+                  : "bg-white text-gray-700 border-gray-200 hover:border-orange-300 hover:bg-orange-50"
+              }`}
+              suppressHydrationWarning
+            >
+              {opt}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-white to-orange-50/30">
@@ -173,6 +166,9 @@ export default function EditRecipe() {
 
         {/* HERO HEADER */}
         <div className="text-center mb-10">
+          <div className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-4 py-2 rounded-full text-xs font-bold mb-4">
+             <Mic size={14} /> Voice Input Available
+          </div>
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-3">
             Edit Your Recipe
           </h1>
@@ -184,7 +180,7 @@ export default function EditRecipe() {
         <form onSubmit={handleSubmit} className="space-y-8">
           
           {/* CARD 1: BASIC INFO */}
-          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 hover:shadow-2xl transition-shadow duration-300">
+          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
               <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
                 <BookOpen size={20} className="text-orange-600" />
@@ -200,7 +196,8 @@ export default function EditRecipe() {
                   defaultValue={defaultData?.title}
                   required 
                   placeholder="e.g., Spicy Malaysian Nasi Lemak"
-                  className="w-full border-2 border-gray-200 p-4 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all text-gray-900 placeholder:text-gray-400" 
+                  className="w-full border-2 border-gray-200 p-4 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                  suppressHydrationWarning
                 />
               </div>
 
@@ -211,7 +208,8 @@ export default function EditRecipe() {
                   defaultValue={defaultData?.description}
                   required 
                   placeholder="Share what makes this recipe special..."
-                  className="w-full border-2 border-gray-200 p-4 rounded-xl h-28 resize-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all text-gray-900 placeholder:text-gray-400" 
+                  className="w-full border-2 border-gray-200 p-4 rounded-xl h-28 resize-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                  suppressHydrationWarning
                 />
               </div>
 
@@ -226,7 +224,8 @@ export default function EditRecipe() {
                     defaultValue={defaultData?.cooking_time}
                     required 
                     placeholder="e.g., 45 mins"
-                    className="w-full border-2 border-gray-200 p-4 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all text-gray-900 placeholder:text-gray-400" 
+                    className="w-full border-2 border-gray-200 p-4 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none"
+                    suppressHydrationWarning
                   />
                 </div>
                 <div>
@@ -237,7 +236,8 @@ export default function EditRecipe() {
                   <select 
                     name="difficulty" 
                     defaultValue={defaultData?.difficulty}
-                    className="w-full border-2 border-gray-200 p-4 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none bg-white transition-all text-gray-900 cursor-pointer"
+                    className="w-full border-2 border-gray-200 p-4 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none bg-white cursor-pointer"
+                    suppressHydrationWarning
                   >
                     <option>Easy</option>
                     <option>Medium</option>
@@ -250,7 +250,7 @@ export default function EditRecipe() {
           </div>
 
           {/* CARD 2: CATEGORIES */}
-          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 hover:shadow-2xl transition-shadow duration-300">
+          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
               <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
                 <Tag size={20} className="text-orange-600" />
@@ -266,7 +266,7 @@ export default function EditRecipe() {
           </div>
 
           {/* CARD 3: IMAGE UPLOAD */}
-          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 hover:shadow-2xl transition-shadow duration-300">
+          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
               <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
                 <ImageIcon size={20} className="text-orange-600" />
@@ -310,8 +310,8 @@ export default function EditRecipe() {
             </div>
           </div>
 
-          {/* CARD 4: INGREDIENTS */}
-          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 hover:shadow-2xl transition-shadow duration-300">
+          {/* CARD 4: INGREDIENTS (SmartInput) */}
+          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
               <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
                 <List size={20} className="text-orange-600" />
@@ -322,21 +322,26 @@ export default function EditRecipe() {
             <div className="space-y-3">
               {ingredients.map((ing, index) => (
                 <div key={index} className="flex gap-3 items-center group">
-                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-bold text-orange-600">{index + 1}</span>
+                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0 font-bold text-orange-600 text-sm">
+                    {index + 1}
                   </div>
-                  <input 
-                    value={ing} 
-                    onChange={(e) => handleArrayChange(index, e.target.value, setIngredients, ingredients)} 
-                    placeholder={`e.g., 2 cups of rice, 1 tbsp of oil`}
-                    className="flex-1 border-2 border-gray-200 p-4 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all text-gray-900 placeholder:text-gray-400" 
-                    required 
-                  />
+                  
+                  {/* REPLACED WITH SMART INPUT */}
+                  <div className="flex-1">
+                    <SmartInput 
+                        value={ing} 
+                        onChange={(val) => handleArrayChange(index, val, setIngredients, ingredients)} 
+                        placeholder="e.g. 2 cups rice"
+                        type="ingredient"
+                    />
+                  </div>
+
                   {ingredients.length > 1 && (
                     <button 
                       type="button" 
                       onClick={() => removeField(index, setIngredients, ingredients)} 
                       className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                      suppressHydrationWarning
                     >
                       <Minus size={20} />
                     </button>
@@ -347,14 +352,15 @@ export default function EditRecipe() {
                 type="button" 
                 onClick={() => addField(setIngredients, ingredients)} 
                 className="flex items-center gap-2 text-orange-600 font-bold mt-4 hover:bg-orange-50 px-5 py-3 rounded-xl transition-all border-2 border-dashed border-orange-300 w-full justify-center hover:border-orange-500"
+                suppressHydrationWarning
               >
                 <Plus size={18} /> Add Another Ingredient
               </button>
             </div>
           </div>
 
-          {/* CARD 5: INSTRUCTIONS */}
-          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 hover:shadow-2xl transition-shadow duration-300">
+          {/* CARD 5: INSTRUCTIONS (SmartTextarea) */}
+          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
               <div className="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
                 <BookOpen size={20} className="text-orange-600" />
@@ -365,24 +371,26 @@ export default function EditRecipe() {
             <div className="space-y-4">
               {instructions.map((step, index) => (
                 <div key={index} className="flex gap-3 items-start group">
-                  <div 
-                    className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0"
-                  >
-                    <span className="text-sm font-bold text-orange-600">{index + 1}</span>
+                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0 font-bold text-orange-600 text-sm mt-2">
+                    {index + 1}
                   </div>
-                  <textarea 
-                    value={step} 
-                    onChange={(e) => handleArrayChange(index, e.target.value, setInstructions, instructions)} 
-                    placeholder={`Describe step ${index + 1} in detail...`}
-                    className="flex-1 border-2 border-gray-200 p-4 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none resize-none transition-all text-gray-900 placeholder:text-gray-400" 
-                    rows={3} 
-                    required 
-                  />
+                  
+                  {/* REPLACED WITH SMART TEXTAREA */}
+                  <div className="flex-1">
+                    <SmartTextarea 
+                        value={step} 
+                        onChange={(val) => handleArrayChange(index, val, setInstructions, instructions)} 
+                        placeholder={`Describe step ${index + 1}...`}
+                        type="instruction"
+                    />
+                  </div>
+
                   {instructions.length > 1 && (
                     <button 
                       type="button" 
                       onClick={() => removeField(index, setInstructions, instructions)} 
                       className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition-all mt-1 opacity-0 group-hover:opacity-100"
+                      suppressHydrationWarning
                     >
                       <Minus size={20} />
                     </button>
@@ -393,6 +401,7 @@ export default function EditRecipe() {
                 type="button" 
                 onClick={() => addField(setInstructions, instructions)} 
                 className="flex items-center gap-2 text-orange-600 font-bold mt-4 hover:bg-orange-50 px-5 py-3 rounded-xl transition-all border-2 border-dashed border-orange-300 w-full justify-center hover:border-orange-500"
+                suppressHydrationWarning
               >
                 <Plus size={18} /> Add Another Step
               </button>
@@ -404,6 +413,7 @@ export default function EditRecipe() {
             type="submit" 
             disabled={saving} 
             className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-5 rounded-2xl font-bold text-lg hover:from-orange-600 hover:to-orange-700 transition-all flex justify-center items-center gap-3 shadow-xl shadow-orange-200 hover:shadow-2xl hover:shadow-orange-300 transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            suppressHydrationWarning
           >
             {saving ? (
               <>

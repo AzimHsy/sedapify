@@ -97,9 +97,11 @@ export default function RecipeGenerator() {
                           ? "bg-orange-100 border-orange-200 text-orange-600"
                           : "bg-gray-50 border-gray-100 text-gray-500 hover:bg-gray-100"
                       }`}
+                      suppressHydrationWarning
                     >
                       {type}
                     </button>
+                    
                   ))}
                 </div>
 
@@ -107,7 +109,7 @@ export default function RecipeGenerator() {
                   type="submit"
                   disabled={loading || !ingredients.trim()}
                   className="shrink-0 flex items-center gap-2 bg-black text-white px-6 py-3 rounded-full font-bold hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                  suppressHydrationWarning>
                   {loading ? (
                     <><Loader2 className="animate-spin" size={18} /> Generating...</>
                   ) : (

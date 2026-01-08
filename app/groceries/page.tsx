@@ -12,7 +12,7 @@ export default async function GroceriesPage() {
     <div className="min-h-screen bg-gray-50">
       <GroceryStore 
         initialProducts={products} 
-        initialShops={shops} // <--- Pass shops here
+        initialShops={shops}
       />
     </div>
   );
