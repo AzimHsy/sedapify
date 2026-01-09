@@ -223,18 +223,14 @@ export default function Sidebar() {
         </Link>
         
         {/* Mobile Search Button */}
-        <button 
-            onClick={() => setIsSearchOpen(true)} 
-            className={`p-2 ${isSearchOpen ? 'text-orange-500' : 'text-gray-500'}`}
-        >
-            <Search size={24} />
-        </button>
-
+        <Link href="/discover" className={`p-2 ${pathname === '/discover' ? 'text-orange-500' : 'text-gray-500'}`}>
+           <Compass size={24} />
+        </Link>
         <Link href="/recipe/create" className="p-2 text-orange-500">
            <PlusSquare size={28} />
         </Link>
-        <Link href="/discover" className={`p-2 ${pathname === '/discover' ? 'text-orange-500' : 'text-gray-500'}`}>
-           <Compass size={24} />
+        <Link href="/groceries" className={`p-2 ${pathname === '/groceries' ? 'text-orange-500' : 'text-gray-500'}`}>
+           <ShoppingBasket size={24} />
         </Link>
         <Link href="/profile" className={`p-2 ${pathname === '/profile' ? 'text-orange-500' : 'text-gray-500'}`}>
            <User size={24} />

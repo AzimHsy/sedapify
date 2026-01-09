@@ -7,7 +7,7 @@ import RecipeCard from '@/components/RecipeCard'
 import RecipeModal from '@/components/RecipeModal'
 import FollowListModal from '@/components/FollowListModal'
 import VideoCard from '@/components/VideoCard' // Import VideoCard
-import { Share2, User, Grid, Heart, Bookmark, PlayCircle, Video } from 'lucide-react'
+import { Share2, User, Grid, Heart, Bookmark, PlayCircle, ShoppingBag } from 'lucide-react'
 import { toggleFollow } from '@/app/actions/interactionActions'
 import EditProfileModal from '@/components/EditProfileModal'
 
@@ -62,9 +62,9 @@ export default function ProfileView({
   }[activeTab]
 
   return (
-    <div className="w-full max-w-7xl mx-auto pt-8 pb-20 px-6 md:px-10">
+    <div className="w-full max-w-8xl mx-auto pt-8 pb-20 px-6 md:px-10">
       
-      {/* HEADER SECTION (Unchanged) */}
+      {/* HEADER SECTION */}
       <div className="flex flex-col md:flex-row items-start md:items-center gap-8 mb-10">
         <div className="relative w-24 h-24 md:w-36 md:h-36 rounded-full overflow-hidden border-4 border-white shadow-sm flex-shrink-0 bg-gray-100">
           {user.avatar_url ? (
@@ -86,12 +86,18 @@ export default function ProfileView({
            <div className="flex gap-3 mb-6 relative z-10 flex-wrap">
             {isMyProfile ? (
               <>
-                 <button 
+              <button 
                 onClick={() => setIsEditModalOpen(true)}
                 className="px-6 py-2.5 bg-gray-100 text-gray-900 font-semibold rounded-lg cursor-pointer hover:bg-gray-200 transition"
               >
                 Edit profile
               </button>
+                <Link 
+                  href="/orders" 
+                  className="flex items-center gap-2 px-6 py-2.5 bg-white border border-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition"
+                >
+                <ShoppingBag size={20} /> My Orders
+                </Link>
                 <Link 
                   href="/video/upload" 
                   className="flex items-center gap-2 px-6 py-2.5 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition"

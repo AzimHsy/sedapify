@@ -6,22 +6,25 @@ import Sidebar from '@/components/Sidebar'
 export default function NavigationWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   
-  // 1. Check for Auth Pages
-  const isAuthPage = pathname === '/login' || pathname === '/signup'
-  
-  // 2. Check for Admin Pages (New Check)
-  const isAdminPage = pathname?.startsWith('/admin')
+  // Define all paths where the Main Customer Sidebar should be HIDDEN
+  const shouldHideSidebar = 
+    pathname === '/login' || 
+    pathname === '/signup' || 
+    pathname === '/onboarding' ||
+    pathname?.startsWith('/admin') ||    // Hide for Admin Panel
+    pathname?.startsWith('/driver') ||   // Hide for Driver App
+    pathname?.startsWith('/merchant')    // Hide for Merchant Dashboard
 
-  // CASE 1: Auth Pages OR Admin Pages -> Return ONLY content (No Regular Sidebar)
-  if (isAuthPage || isAdminPage) {
+  // CASE 1: Specialized Pages (No Sidebar)
+  if (shouldHideSidebar) {
     return (
-      <main className="min-h-screen">
+      <main className="min-h-screen w-full">
         {children}
       </main>
     )
   }
 
-  // CASE 2: Regular User Pages -> Sidebar + Content
+  // CASE 2: Regular Customer Pages (Show Sidebar)
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />

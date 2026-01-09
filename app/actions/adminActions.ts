@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
 // --- HELPER: CHECK ADMIN PERMISSION ---
+// This protects every action in this file
 async function checkAdmin() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -20,148 +21,40 @@ async function checkAdmin() {
   return user
 }
 
-// --- ORDER MANAGEMENT ---
-
-export async function getAdminOrders() {
-  await checkAdmin()
-  const supabase = await createClient()
-  
-  const { data: orders } = await supabase
-    .from('orders')
-    .select(`
-      *,
-      users (username, email),
-      shops (name)
-    `)
-    .order('created_at', { ascending: false })
-    
-  return orders || []
-}
-
-export async function updateOrderStatus(orderId: string, newStatus: string) {
-  await checkAdmin()
-  const supabase = await createClient()
-  
-  await supabase
-    .from('orders')
-    .update({ status: newStatus })
-    .eq('id', orderId)
-    
-  revalidatePath('/admin/orders')
-}
-
-// --- PRODUCT / INVENTORY MANAGEMENT ---
-
-export async function addProduct(formData: FormData) {
-  await checkAdmin()
-  const supabase = await createClient()
-
-  const name = formData.get('name') as string
-  const price = parseFloat(formData.get('price') as string)
-  const category = formData.get('category') as string
-  const unit = formData.get('unit') as string
-  const shop_id = formData.get('shop_id') as string
-  const imageFile = formData.get('image') as File
-
-  let image_url = null
-
-  // Upload Image
-  if (imageFile && imageFile.size > 0) {
-    const filename = `product-${Date.now()}`
-    const { error: uploadError } = await supabase.storage
-      .from('recipe-images')
-      .upload(filename, imageFile)
-      
-    if (!uploadError) {
-      const { data } = supabase.storage.from('recipe-images').getPublicUrl(filename)
-      image_url = data.publicUrl
-    }
-  }
-
-  const { error } = await supabase.from('products').insert({
-    name, price, category, unit, shop_id, image_url
-  })
-
-  if (error) return { error: error.message }
-  revalidatePath('/admin/products')
-  return { success: true }
-}
-
-export async function updateProduct(formData: FormData) {
-  await checkAdmin()
-  const supabase = await createClient()
-
-  const id = formData.get('id') as string
-  const name = formData.get('name') as string
-  const price = parseFloat(formData.get('price') as string)
-  const category = formData.get('category') as string
-  const unit = formData.get('unit') as string
-  const shop_id = formData.get('shop_id') as string
-  const imageFile = formData.get('image') as File
-  const currentImageUrl = formData.get('current_image_url') as string
-
-  let image_url = currentImageUrl
-
-  if (imageFile && imageFile.size > 0) {
-    const filename = `product-${Date.now()}`
-    const { error: uploadError } = await supabase.storage
-      .from('recipe-images')
-      .upload(filename, imageFile)
-      
-    if (!uploadError) {
-      const { data } = supabase.storage.from('recipe-images').getPublicUrl(filename)
-      image_url = data.publicUrl
-    }
-  }
-
-  const { error } = await supabase
-    .from('products')
-    .update({ name, price, category, unit, shop_id, image_url })
-    .eq('id', id)
-
-  if (error) return { error: error.message }
-  
-  revalidatePath('/admin/products')
-  return { success: true }
-}
-
-export async function deleteProduct(productId: string) {
-  await checkAdmin()
-  const supabase = await createClient()
-  await supabase.from('products').delete().eq('id', productId)
-  revalidatePath('/admin/products')
-}
-
-// --- DASHBOARD STATS ---
+// ==========================================
+// 1. DASHBOARD OVERVIEW & STATS
+// ==========================================
 
 export async function getDashboardStats() {
   await checkAdmin()
   const supabase = await createClient()
 
+  // Basic Counts
   const { count: orderCount } = await supabase.from('orders').select('*', { count: 'exact', head: true })
   const { count: userCount } = await supabase.from('users').select('*', { count: 'exact', head: true })
   const { count: productCount } = await supabase.from('products').select('*', { count: 'exact', head: true })
 
-  // Revenue (Paid + Delivered)
-  const { data: paidOrders } = await supabase
+  // Calculate Revenue (Only from 'completed' orders)
+  const { data: completedOrders } = await supabase
     .from('orders')
     .select('total_amount, created_at')
-    .in('status', ['paid', 'delivered']) 
+    .eq('status', 'completed')
     .order('created_at', { ascending: true })
 
-  const totalRevenue = paidOrders?.reduce((acc, order) => acc + (order.total_amount || 0), 0) || 0
+  const totalRevenue = completedOrders?.reduce((acc, order) => acc + (order.total_amount || 0), 0) || 0
 
-  // Recent Orders
+  // Recent Orders (For Dashboard Widget)
   const { data: recentOrders } = await supabase
     .from('orders')
     .select('id, total_amount, status, users(username)')
     .order('created_at', { ascending: false })
     .limit(5)
 
-  // Chart Data
-  const chartData = paidOrders?.reduce((acc: any[], order) => {
+  // Prepare Chart Data (Last 7 transactions/days)
+  const chartData = completedOrders?.reduce((acc: any[], order) => {
     const date = new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    const existing = acc.find(item => item.date === date)
+    const existing = acc.find((item: any) => item.date === date)
+    
     if (existing) {
       existing.sales += order.total_amount
     } else {
@@ -180,7 +73,81 @@ export async function getDashboardStats() {
   }
 }
 
-// --- RECIPES ---
+// ==========================================
+// 2. USER MANAGEMENT (ROLES)
+// ==========================================
+
+export async function getAdminUsers() {
+  await checkAdmin()
+  const supabase = await createClient()
+  
+  const { data } = await supabase
+    .from('users')
+    .select('*')
+    .order('created_at', { ascending: false })
+    
+  return data || []
+}
+
+export async function updateUserRole(userId: string, newRole: string) {
+  await checkAdmin()
+  const supabase = await createClient()
+  
+  // 1. Update the role in users table
+  const { error } = await supabase
+    .from('users')
+    .update({ role: newRole })
+    .eq('id', userId)
+  
+  if (error) return { error: error.message }
+
+  // 2. Special Logic: If promoting to 'driver', ensure they exist in 'drivers' table
+  if (newRole === 'driver') {
+    // Upsert ensures we don't crash if they are already a driver
+    await supabase.from('drivers').upsert({ id: userId }).select()
+  }
+  
+  revalidatePath('/admin/users')
+  return { success: true }
+}
+
+// ==========================================
+// 3. ORDER OVERSIGHT
+// ==========================================
+
+export async function getAdminOrders() {
+  await checkAdmin()
+  const supabase = await createClient()
+  
+  const { data: orders } = await supabase
+    .from('orders')
+    .select(`
+      *,
+      users (username, email),
+      shops (name),
+      drivers (id)
+    `)
+    .order('created_at', { ascending: false })
+    
+  return orders || []
+}
+
+// Admin Power: Force Cancel an order (e.g. disputes/fraud)
+export async function adminCancelOrder(orderId: string) {
+  await checkAdmin()
+  const supabase = await createClient()
+  
+  await supabase
+    .from('orders')
+    .update({ status: 'cancelled' })
+    .eq('id', orderId)
+    
+  revalidatePath('/admin/orders')
+}
+
+// ==========================================
+// 4. CONTENT MODERATION (RECIPES & VIDEOS)
+// ==========================================
 
 export async function getAdminRecipes() {
   await checkAdmin()
@@ -194,7 +161,15 @@ export async function getAdminRecipes() {
   return data || []
 }
 
-// --- VIDEOS ---
+export async function deleteRecipe(recipeId: string) {
+  await checkAdmin()
+  const supabase = await createClient()
+  
+  const { error } = await supabase.from('recipes').delete().eq('id', recipeId)
+  if (error) console.error("Delete Recipe Error:", error)
+
+  revalidatePath('/admin/recipes')
+}
 
 export async function getAdminVideos() {
   await checkAdmin()
@@ -211,25 +186,29 @@ export async function getAdminVideos() {
 export async function deleteVideo(videoId: string) {
   await checkAdmin()
   const supabase = await createClient()
+  
   await supabase.from('cooking_videos').delete().eq('id', videoId)
   revalidatePath('/admin/videos')
 }
 
-// --- USERS ---
+// ==========================================
+// 5. INVENTORY MODERATION (PRODUCTS)
+// ==========================================
 
-export async function getAdminUsers() {
+// Note: Admins do NOT add/edit products (Merchants do that).
+// Admins only delete illegal/bad products.
+
+export async function deleteProduct(productId: string) {
   await checkAdmin()
   const supabase = await createClient()
   
-  const { data } = await supabase
-    .from('users')
-    .select('*')
-    .order('created_at', { ascending: false })
-    
-  return data || []
+  await supabase.from('products').delete().eq('id', productId)
+  revalidatePath('/admin/products')
 }
 
-// --- ANALYTICS ---
+// ==========================================
+// 6. ANALYTICS
+// ==========================================
 
 export async function getCategoryStats() {
   await checkAdmin()
@@ -237,25 +216,12 @@ export async function getCategoryStats() {
   
   const { data } = await supabase.from('products').select('category')
   
+  // Aggregate counts
   const counts: Record<string, number> = {}
   data?.forEach((p) => {
     counts[p.category] = (counts[p.category] || 0) + 1
   })
 
+  // Format for Recharts
   return Object.entries(counts).map(([name, value]) => ({ name, value }))
-} 
-
-// --- ADMIN DELETE RECIPE (NEW) ---
-
-export async function deleteRecipe(recipeId: string) {
-  await checkAdmin()
-  const supabase = await createClient()
-  
-  const { error } = await supabase
-    .from('recipes')
-    .delete()
-    .eq('id', recipeId)
-
-  if (error) console.error("Delete Error:", error)
-  revalidatePath('/admin/recipes')
 }

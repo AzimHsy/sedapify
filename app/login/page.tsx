@@ -15,36 +15,47 @@ export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const handleAuth = async (e: React.FormEvent) => {
+const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     if (isSignUp) {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-      if (error) {
-        alert(error.message);
-      } else {
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) alert(error.message);
+      else {
         alert("Success! Check your email to confirm, then log in.");
         setIsSignUp(false);
       }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: { user }, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
+
       if (error) {
         alert(error.message);
-      } else {
-        const { data: { user } } = await supabase.auth.getUser();
-        const { data: profile } = await supabase.from('users').select('onboarding_completed').eq('id', user?.id).single();
-        
-        if (profile?.onboarding_completed) {
-            router.push("/");
-        } else {
-            router.push("/onboarding");
+      } else if (user) {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('role, onboarding_completed')
+          .eq('id', user.id)
+          .single();
+          
+        if (profile?.role === 'driver') {
+            router.push("/driver/dashboard");
+        } 
+        else if (profile?.role === 'merchant') {
+            router.push("/merchant/dashboard");
+        } 
+        else if (profile?.role === 'admin') {
+            router.push("/admin");
+        } 
+        else {
+            if (profile?.onboarding_completed) {
+                router.push("/");
+            } else {
+                router.push("/onboarding");
+            }
         }
       }
     }

@@ -1,59 +1,63 @@
 import { createClient } from '@/lib/supabase/server'
-import AdminProductForm from '@/components/AdminProductForm'
-import ProductFilters from '@/components/ProductFilters'
-import AdminProductList from '@/components/AdminProductList'
+import { deleteProduct } from '@/app/actions/adminActions'
+import { Trash2, AlertTriangle } from 'lucide-react'
+import Image from 'next/image'
 
-// Define props to receive searchParams (URL query strings)
-export default async function AdminProductsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string; cat?: string }>
-}) {
-  const params = await searchParams // Next.js 15 requirement
-  const query = params.q || ''
-  const category = params.cat || ''
-
+export default async function AdminProductsPage() {
   const supabase = await createClient()
   
-  // 1. Start Query
-  let dbQuery = supabase
-    .from('products')
-    .select('*')
-    .order('created_at', { ascending: false })
-
-  // 2. Apply Filters if they exist
-  if (query) {
-    dbQuery = dbQuery.ilike('name', `%${query}%`) // Case-insensitive search
-  }
-  if (category && category !== 'All') {
-    dbQuery = dbQuery.eq('category', category)
-  }
-
-  // 3. Execute Query
-  const { data: products } = await dbQuery
-  const { data: shops } = await supabase.from('shops').select('id, name')
+  // Fetch data
+  const { data: products } = await supabase.from('products').select('*, shops(name)').order('created_at', { ascending: false })
 
   return (
-    <div className="grid lg:grid-cols-3 gap-8">
-      
-      {/* LEFT: Product List & Filters */}
-      <div className="lg:col-span-2 space-y-6">
-        <div className="flex justify-between items-center">
-             <h1 className="text-2xl font-bold">Inventory</h1>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Inventory Moderation</h1>
+        <div className="bg-yellow-50 text-yellow-700 px-4 py-2 rounded-lg text-sm border border-yellow-200 flex items-center gap-2">
+            <AlertTriangle size={16} />
+            Note: Product creation is handled by Merchants.
         </div>
-
-        {/* SEARCH & FILTER COMPONENT */}
-        <ProductFilters />
-
-        {/* LIST COMPONENT (With Edit Modal built-in) */}
-        <AdminProductList products={products || []} shops={shops || []} />
       </div>
 
-      {/* RIGHT: Add Product Form */}
-      <div>
-        <AdminProductForm shops={shops || []} />
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <table className="w-full text-left">
+          <thead className="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <th className="p-4 text-sm">Product</th>
+              <th className="p-4 text-sm">Shop</th>
+              <th className="p-4 text-sm">Price</th>
+              <th className="p-4 text-sm text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {products?.map((product: any) => (
+              <tr key={product.id}>
+                <td className="p-4 font-medium flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gray-100 relative overflow-hidden">
+                        {product.image_url && <Image src={product.image_url} alt="" fill className="object-cover" />}
+                    </div>
+                    <div>
+                        <p>{product.name}</p>
+                        <p className="text-xs text-gray-400">{product.category}</p>
+                    </div>
+                </td>
+                <td className="p-4 text-sm text-gray-600">{product.shops?.name}</td>
+                <td className="p-4 text-gray-900 font-bold">RM {product.price}</td>
+                <td className="p-4 text-right">
+                  <form action={async () => {
+                    'use server'
+                    await deleteProduct(product.id)
+                  }}>
+                    <button className="text-red-500 hover:bg-red-50 p-2 rounded transition" title="Remove Item">
+                      <Trash2 size={16} />
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
-
     </div>
   )
 }
