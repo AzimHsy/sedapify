@@ -3,36 +3,62 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers' // <--- Import Cookies
 
-// Helper: Ensure user is a Merchant and get their Shop ID
+// 1. ACTION: Switch Active Shop (Called by Sidebar)
+export async function switchMerchantShop(shopId: string) {
+  const cookieStore = await cookies()
+  cookieStore.set('merchant_active_shop', shopId)
+  revalidatePath('/merchant') // Refresh all merchant pages
+}
+
+// 2. HELPER: Get the currently active shop based on Cookie
 async function getMerchantShop() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) redirect('/login')
 
-  // 1. Verify Role
+  // Check Role
   const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
   if (profile?.role !== 'merchant') redirect('/')
 
-  // 2. Get Shop ID
-  // FIX: Added .limit(1) to prevent crashing if user owns multiple shops
-  const { data: shop, error } = await supabase
-    .from('shops')
-    .select('id')
-    .eq('owner_id', user.id)
-    .limit(1)
-    .single()
+  // Check Cookie
+  const cookieStore = await cookies()
+  const activeShopId = cookieStore.get('merchant_active_shop')?.value
+
+  let shop = null
+
+  if (activeShopId) {
+    // A. Try to fetch the specific shop from cookie (Security: Must still be owned by user)
+    const { data } = await supabase
+      .from('shops')
+      .select('id')
+      .eq('id', activeShopId)
+      .eq('owner_id', user.id)
+      .single()
+    shop = data
+  }
+
+  if (!shop) {
+    // B. Fallback: If cookie is missing or invalid, grab the first shop owned
+    const { data } = await supabase
+      .from('shops')
+      .select('id')
+      .eq('owner_id', user.id)
+      .limit(1)
+      .single()
+    shop = data
+  }
   
-  if (error || !shop) {
-    console.error("Merchant Shop Error:", error)
+  if (!shop) {
     throw new Error("You are a merchant, but you don't have a shop assigned yet.")
   }
 
   return { user, shop }
 }
 
-// --- PRODUCT MANAGEMENT ---
+// --- PRODUCT MANAGEMENT (Unchanged logic, but now uses the smart getMerchantShop) ---
 
 export async function getMerchantProducts() {
   const { shop } = await getMerchantShop()
@@ -60,14 +86,29 @@ export async function addMerchantProduct(formData: FormData) {
   let image_url = null
 
   if (imageFile && imageFile.size > 0) {
-    const filename = `product-${shop.id}-${Date.now()}`
+    // 1. Get file extension
+    const fileExt = imageFile.name.split('.').pop()
+    
+    // 2. SANITIZE FILENAME: Create a clean, safe name
+    // Example: product-123-17150000.png (No spaces, no weird symbols)
+    const fileName = `product-${shop.id}-${Date.now()}.${fileExt}`
+
+    // 3. Upload with the CLEAN name
     const { error: uploadError } = await supabase.storage
       .from('recipe-images')
-      .upload(filename, imageFile)
+      .upload(fileName, imageFile, {
+        cacheControl: '3600',
+        upsert: false
+      })
       
-    if (!uploadError) {
-      const { data } = supabase.storage.from('recipe-images').getPublicUrl(filename)
+    if (uploadError) {
+      console.error("Upload Error:", uploadError)
+      return { error: "Image upload failed: " + uploadError.message }
+    } else {
+      // 4. Get the URL for the CLEAN name
+      const { data } = supabase.storage.from('recipe-images').getPublicUrl(fileName)
       image_url = data.publicUrl
+      console.log("✅ Image Saved to:", image_url) // Check your terminal to see this
     }
   }
 

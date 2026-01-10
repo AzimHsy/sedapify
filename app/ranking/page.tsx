@@ -4,16 +4,15 @@ import RankingView from '@/components/RankingView'
 export default async function RankingPage() {
   const supabase = await createClient()
 
-  // 1. FETCH USERS + FOLLOWERS COUNT
-  // We fetch the 'follows' table where 'following_id' matches the user
+  // 1. FETCH USERS (Top Chefs)
   const { data: usersRaw } = await supabase
     .from('users')
     .select(`
       id, username, email, avatar_url,
       follows!follows_following_id_fkey (count)
     `)
-    // Note: We cannot order by count easily in API, so we fetch and sort in JS.
-    // Ideally, for millions of users, you'd use a Database View or RPC.
+    .eq('role', 'user') 
+    .not('username', 'ilike', '%bot%') 
     .limit(100) 
 
   // 2. Process Users (Sort by Followers)
@@ -26,7 +25,7 @@ export default async function RankingPage() {
     .slice(0, 10) || []
 
 
-  // 3. FETCH RECIPES + LIKES COUNT
+  // 3. FETCH RECIPES (Top Recipes)
   const { data: recipesRaw } = await supabase
     .from('recipes')
     .select(`

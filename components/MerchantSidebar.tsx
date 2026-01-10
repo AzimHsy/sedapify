@@ -1,12 +1,19 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Package, Settings, LogOut, Store } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
+import { LayoutDashboard, Package, Settings, LogOut } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
+import MerchantShopSwitcher from './MerchantShopSwitcher' // <--- Import
 
-export default function MerchantSidebar() {
+// Updated props
+export default function MerchantSidebar({ 
+  shops, 
+  activeShopId 
+}: { 
+  shops: any[], 
+  activeShopId: string 
+}) {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
@@ -25,19 +32,13 @@ export default function MerchantSidebar() {
   return (
     <aside className="w-64 bg-slate-900 text-white flex flex-col fixed h-full z-50 border-r border-slate-800">
       
-      {/* Brand */}
-      <div className="p-6 border-b border-slate-800 flex items-center gap-3">
-        <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/30">
-          <Store size={20} className="text-white" />
-        </div>
-        <div>
-          <h1 className="text-lg font-bold">Merchant</h1>
-          <p className="text-xs text-slate-400">Partner Portal</p>
-        </div>
+      {/* Brand & Switcher */}
+      <div className="p-4 border-b border-slate-800">
+        <MerchantShopSwitcher shops={shops} activeShopId={activeShopId} />
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-6 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1">
         {navItems.map((item) => {
           const isActive = pathname === item.href
           const Icon = item.icon

@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { createClient } from "@/lib/supabase/server"; // Import Supabase
+import { createClient } from "@/lib/supabase/server";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-12-15.clover', // Use your version or '2023-10-16'
+  apiVersion: '2025-12-15.clover',
 });
 
 export async function POST(req: Request) {
   try {
-    const { cartItems, shopName, shopId } = await req.json(); // Expect shopId from frontend
+    // 1. EXTRACT shopId from the request
+    const { cartItems, shopName, shopId } = await req.json();
 
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -18,10 +19,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
     }
 
-    // 1. Calculate Total
+    // Calculate Total
     const totalAmount = cartItems.reduce((acc: number, item: any) => acc + (item.price * item.qty), 0);
 
-    // 2. Create Stripe Line Items
+    // Create Stripe Line Items
     const line_items = cartItems.map((item: any) => ({
       price_data: {
         currency: "myr",
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
       quantity: item.qty,
     }));
 
-    // 3. Create Stripe Session
+    // Create Stripe Session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: line_items,
@@ -47,12 +48,12 @@ export async function POST(req: Request) {
       }
     });
 
-    // 4. Save "Pending" Order to Database
+    // 2. SAVE ORDER TO DATABASE
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
         user_id: user.id,
-        shop_id: shopId,
+        shop_id: shopId, // <--- CRITICAL: THIS MUST BE SAVED
         total_amount: totalAmount,
         status: 'pending',
         stripe_session_id: session.id
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
 
     if (orderError) throw new Error(orderError.message);
 
-    // 5. Save Order Items
+    // Save Order Items
     const orderItemsData = cartItems.map((item: any) => ({
         order_id: order.id,
         product_id: item.id,

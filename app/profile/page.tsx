@@ -12,7 +12,7 @@ export default async function ProfilePage() {
   // 1. User Profile
   const { data: userProfile } = await supabase.from('users').select('*').eq('id', authUser.id).single()
 
-  // 2. My Recipes (Join Likes count if you want, but sticking to basic list here)
+  // 2. My Recipes
   const { data: myRecipes } = await supabase
     .from('recipes')
     .select('*, users(username, avatar_url)')
@@ -54,7 +54,7 @@ export default async function ProfilePage() {
   // @ts-ignore
   const likedRecipes = likedRaw?.map(item => item.recipes) || []
 
-  // --- NEW: CALCULATE COUNTS ---
+  // --- CALCULATE COUNTS ---
 
   // Total Likes Received
   const myRecipeIds = myRecipes?.map(r => r.id) || []

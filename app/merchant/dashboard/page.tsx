@@ -1,19 +1,19 @@
 import { getOrders, updateOrderStatus } from '@/app/actions/orderActions'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { Package, CheckCircle, Clock, Truck } from 'lucide-react'
+import { Package, CheckCircle, Truck } from 'lucide-react'
 import Image from 'next/image'
 
 export default async function MerchantDashboard() {
-  // 1. Security Check
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   
-  // Verify role is merchant (optional, but good for safety)
-  const { data: profile } = await supabase.from('users').select('role').eq('id', user?.id).single()
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
   if (profile?.role !== 'merchant') redirect('/')
 
-  // 2. Fetch Orders (RLS ensures they only see their shop's orders)
+  // Use the generic getOrders (RLS handles filtering)
   const orders = await getOrders()
 
   return (
@@ -36,7 +36,9 @@ export default async function MerchantDashboard() {
                 <p className="text-gray-400">No active orders yet.</p>
             </div>
           ) : (
-            orders.map((order: any) => (
+            orders.map((order: any) => {
+                if (order.status === 'pending') return null;
+                return (
               <div key={order.id} className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                 
                 {/* Header */}
@@ -50,7 +52,10 @@ export default async function MerchantDashboard() {
                     </div>
                     <div className="text-right">
                         <p className="font-bold text-xl text-gray-900">RM {order.total_amount}</p>
-                        <p className="text-xs text-gray-400">{new Date(order.created_at).toLocaleString()}</p>
+                        {/* FIX: Suppress Hydration Warning for Date */}
+                        <p className="text-xs text-gray-400" suppressHydrationWarning>
+                            {new Date(order.created_at).toLocaleString()}
+                        </p>
                     </div>
                 </div>
 
@@ -70,9 +75,9 @@ export default async function MerchantDashboard() {
                     ))}
                 </div>
 
-                {/* Action Buttons (State Machine) */}
+                {/* Action Buttons */}
                 <div className="p-4 bg-white border-t border-gray-100 flex justify-end gap-3">
-                    {/* STATE 1: Pending -> Preparing */}
+                    
                     {(order.status === 'pending' || order.status === 'paid') && (
                         <form action={async () => { 'use server'; await updateOrderStatus(order.id, 'preparing') }}>
                             <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold transition flex items-center gap-2">
@@ -81,7 +86,6 @@ export default async function MerchantDashboard() {
                         </form>
                     )}
 
-                    {/* STATE 2: Preparing -> Ready for Pickup (Calls Driver) */}
                     {order.status === 'preparing' && (
                         <form action={async () => { 'use server'; await updateOrderStatus(order.id, 'ready_for_pickup') }}>
                             <button className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-lg font-bold transition flex items-center gap-2">
@@ -90,21 +94,27 @@ export default async function MerchantDashboard() {
                         </form>
                     )}
 
-                    {/* VIEW ONLY STATES */}
                     {order.status === 'driver_assigned' && (
-                        <div className="text-blue-600 font-bold flex items-center gap-2 px-4 py-2">
+                        <div className="text-blue-600 font-bold flex items-center gap-2 px-4 py-2 bg-blue-50 rounded-lg">
                             <Truck size={18} /> Driver Assigned
                         </div>
                     )}
+                    
+                    {order.status === 'picked_up' && (
+                        <div className="text-orange-600 font-bold flex items-center gap-2 px-4 py-2 bg-orange-50 rounded-lg">
+                            <Truck size={18} /> Out for Delivery
+                        </div>
+                    )}
+
                      {order.status === 'completed' && (
-                        <div className="text-green-600 font-bold flex items-center gap-2 px-4 py-2">
+                        <div className="text-green-600 font-bold flex items-center gap-2 px-4 py-2 bg-green-50 rounded-lg">
                             <CheckCircle size={18} /> Completed
                         </div>
                     )}
                 </div>
 
               </div>
-            ))
+            )}) 
           )}
         </div>
 
@@ -116,7 +126,7 @@ export default async function MerchantDashboard() {
 function StatusBadge({ status }: { status: string }) {
     const colors: any = {
         pending: 'bg-yellow-100 text-yellow-700',
-        paid: 'bg-yellow-100 text-yellow-700',
+        paid: 'bg-blue-100 text-blue-700',
         preparing: 'bg-blue-100 text-blue-700',
         ready_for_pickup: 'bg-purple-100 text-purple-700',
         driver_assigned: 'bg-indigo-100 text-indigo-700',
@@ -126,7 +136,7 @@ function StatusBadge({ status }: { status: string }) {
     }
     return (
         <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${colors[status] || 'bg-gray-100'}`}>
-            {status.replace(/_/g, ' ')}
+            {status?.replace(/_/g, ' ') || 'Unknown'}
         </span>
     )
 }
