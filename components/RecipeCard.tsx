@@ -5,6 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Heart, ArrowUpRight, User, MoreHorizontal, Trash2, Edit, Bot, Sparkles } from 'lucide-react'
 import { deleteRecipeAction } from '@/app/actions/recipeActions'
+import { toggleLike } from '@/app/actions/interactionActions'
 import { useRouter } from 'next/navigation'
 
 interface RecipeCardProps {
@@ -21,22 +22,26 @@ interface RecipeCardProps {
   cuisine?: string
   mealType?: string
   dietary?: string
-  isAiGenerated?: boolean 
-  onExpand?: () => void
+  isAiGenerated?: boolean
+  initialIsLiked?: boolean 
+  // FIX 1: Update onExpand to accept the boolean status
+  onExpand?: (currentLikeStatus: boolean) => void 
 }
 
 export default function RecipeCard({ 
   id, title, description, image, time, views, 
   author, authorAvatar, userId, currentUserId, 
   cuisine, mealType, dietary, 
-  isAiGenerated = false, 
+  isAiGenerated = false,
+  initialIsLiked = false, 
   onExpand 
 }: RecipeCardProps) {
   
   const [showMenu, setShowMenu] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [liked, setLiked] = useState(initialIsLiked)
+  
   const router = useRouter()
-
   const isOwner = currentUserId === userId
 
   const handleDelete = async (e: React.MouseEvent) => {
@@ -48,18 +53,25 @@ export default function RecipeCard({
     if (result.success) router.refresh()
   }
 
+  const handleLike = async (e: React.MouseEvent) => {
+    e.stopPropagation() 
+    if (!currentUserId) return router.push('/login')
+    setLiked(!liked)
+    await toggleLike(id)
+  }
+
   const authorProfileLink = isAiGenerated ? '/generated-recipes' : `/profile/${userId}`
 
   return (
     <div 
-      onClick={onExpand}
+      // FIX 2: Pass the current 'liked' state when clicking the card
+      onClick={() => onExpand && onExpand(liked)}
       className={`bg-white p-3 rounded-3xl shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col h-full border cursor-pointer relative ${isAiGenerated ? 'border-orange-200' : 'border-gray-100'}`}
     >
-      {/* Image Container */}
+      {/* ... (Keep Image Container code exactly the same) ... */}
       <div className="relative h-48 w-full rounded-2xl overflow-hidden mb-3">
         <Image 
           src={image || '/placeholder-food.jpg'} 
-          // FIX 1: Ensure title fallback
           alt={title || "Recipe Image"} 
           fill 
           className="object-cover group-hover:scale-105 transition duration-500" 
@@ -72,8 +84,15 @@ export default function RecipeCard({
             </div>
         )}
 
-        <button className="absolute top-3 right-3 bg-white/80 backdrop-blur-sm p-2 rounded-full hover:bg-red-50 hover:text-red-500 transition z-10">
-            <Heart size={20} />
+        <button 
+            onClick={handleLike}
+            className={`absolute top-3 right-3 backdrop-blur-sm p-2 rounded-full transition z-10 ${
+                liked 
+                ? 'bg-red-50 text-red-500' 
+                : 'bg-white/80 hover:bg-red-50 hover:text-red-500 text-gray-600'
+            }`}
+        >
+            <Heart size={20} fill={liked ? "currentColor" : "none"} />
         </button>
         
         {isOwner && (
@@ -111,13 +130,7 @@ export default function RecipeCard({
                 <Bot className="text-white" size={18} />
               ) : (
                 authorAvatar ? (
-                    <Image 
-                      src={authorAvatar} 
-                      // FIX 2: Ensure author fallback
-                      alt={author || "Chef Avatar"} 
-                      fill 
-                      className="object-cover" 
-                    />
+                    <Image src={authorAvatar} alt={author || "Chef Avatar"} fill className="object-cover" />
                 ) : (
                     <User className="p-1 text-gray-400" />
                 )

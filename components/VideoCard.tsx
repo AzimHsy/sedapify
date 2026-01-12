@@ -88,7 +88,7 @@ export default function VideoCard({ video, currentUserId }: any) {
                     <User className="w-full h-full p-1 bg-gray-600 text-white" />
                 )}
              </div>
-             <span className="text-gray-400 text-xs group-hover/author:text-white transition">
+             <span className="text-gray-800 text-xs group-hover/author:text-orange-600 transition">
                 {video.users?.username || "Unknown Chef"}
              </span>
         </Link>

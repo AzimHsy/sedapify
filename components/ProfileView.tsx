@@ -22,6 +22,7 @@ interface ProfileViewProps {
   followersCount: number
   followingCount: number
   isFollowingInitial?: boolean
+  likedRecipeIds?: string[]
 }
 
 export default function ProfileView({ 
@@ -34,7 +35,8 @@ export default function ProfileView({
   totalLikesReceived,
   followersCount,
   followingCount,
-  isFollowingInitial = false
+  isFollowingInitial = false,
+  likedRecipeIds = []
 }: ProfileViewProps) {
   
   // Default to 'recipes' or 'videos' depending on what you want first
@@ -209,6 +211,7 @@ export default function ProfileView({
                 userId={recipe.user_id}
                 currentUserId={currentUserId}
                 isAiGenerated={recipe.is_ai_generated}
+                initialIsLiked={likedRecipeIds.includes(recipe.id)}
                 onExpand={() => setSelectedRecipe(recipe)}
             />
             ))}

@@ -4,9 +4,18 @@ import { useState } from 'react'
 import RecipeCard from './RecipeCard'
 import RecipeModal from './RecipeModal'
 
-// Add currentUserId to props
-export default function FeedWrapper({ recipes, currentUserId }: { recipes: any[], currentUserId?: string }) {
+// Add likedRecipeIds to props
+export default function FeedWrapper({ 
+    recipes, 
+    currentUserId, 
+    likedRecipeIds = [] // Default to empty array
+}: { 
+    recipes: any[], 
+    currentUserId?: string,
+    likedRecipeIds?: string[] 
+}) {
   const [selectedRecipe, setSelectedRecipe] = useState<any>(null)
+  const [selectedRecipeLiked, setSelectedRecipeLiked] = useState(false)
 
   return (
     <>
@@ -28,7 +37,14 @@ export default function FeedWrapper({ recipes, currentUserId }: { recipes: any[]
             dietary={recipe.dietary}
             userId={recipe.user_id}
             currentUserId={currentUserId}
-            onExpand={() => setSelectedRecipe(recipe)} 
+            
+            // FIX: Check if THIS specific recipe ID is in the user's liked list
+            initialIsLiked={likedRecipeIds.includes(recipe.id)}
+            
+            onExpand={(isLiked) => {
+                setSelectedRecipe(recipe)
+                setSelectedRecipeLiked(isLiked)
+            }} 
           />
         ))}
       </div>
@@ -38,6 +54,7 @@ export default function FeedWrapper({ recipes, currentUserId }: { recipes: any[]
           recipe={selectedRecipe} 
           isOpen={!!selectedRecipe} 
           onClose={() => setSelectedRecipe(null)} 
+          initialLikeState={selectedRecipeLiked}
         />
       )}
     </>

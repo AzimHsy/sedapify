@@ -192,7 +192,7 @@ export default function CreateRecipe() {
                   </div>
                 )}
               </label>
-            </div>
+            </div>   
           </div>
 
           {/* INGREDIENTS (With Smart Input) */}

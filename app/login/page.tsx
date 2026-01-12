@@ -62,13 +62,21 @@ const handleAuth = async (e: React.FormEvent) => {
     setLoading(false);
   };
 
-  const handleGoogleLogin = async () => {
-    await supabase.auth.signInWithOAuth({
+const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${location.origin}/auth/callback`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
       },
     })
+
+    if (error) {
+      alert("Google Login Error: " + error.message)
+    }
   }
 
   return (

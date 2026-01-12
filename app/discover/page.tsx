@@ -8,13 +8,13 @@ export default async function DiscoverPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  // 1. Fetch Recipes (Existing logic)
+  // 1. Fetch Recipes
   const { data: allRecipes } = await supabase
     .from("recipes")
     .select(`*, users (username, avatar_url), likes (count)`)
     .not("image_url", "is", null);
 
-  // 2. FETCH VIDEOS (New Logic: Limit 5)
+  // 2. Fetch Videos
   const { data: videos } = await supabase
     .from("cooking_videos")
     .select(`
@@ -23,25 +23,32 @@ export default async function DiscoverPage() {
         recipes (id, title)
     `)
     .order('created_at', { ascending: false })
-    .limit(5); // <--- CHANGED TO 5
+    .limit(5);
 
-  // ... (Your existing filtering logic for recipes remains here) ...
-  // (Trending, Japanese, Vegetarian, New Recipes logic...)
-  // For brevity, I'm assuming you kept the logic variables:
-  // trendingRecipes, japaneseRecipes, vegetarianRecipes, newRecipes
+  // 3. (NEW) Fetch User's Liked IDs
+  let likedRecipeIds: string[] = [];
+  if (user) {
+    const { data: likes } = await supabase
+        .from('likes')
+        .select('recipe_id')
+        .eq('user_id', user.id);
+    if (likes) {
+        likedRecipeIds = likes.map(l => l.recipe_id);
+    }
+  }
 
-    // --- DATA PROCESSING (Re-adding briefly so code doesn't break) ---
-    if (!allRecipes) return <div>Loading...</div>;
-    const trendingRecipes = [...allRecipes].sort((a, b) => (b.likes?.[0]?.count || 0) - (a.likes?.[0]?.count || 0)).slice(0, 8);
-    const japaneseRecipes = allRecipes.filter((r) => r.cuisine === "Japanese").slice(0, 4);
-    const vegetarianRecipes = allRecipes.filter((r) => r.dietary === "Vegetarian").slice(0, 4);
-    const newRecipes = [...allRecipes].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 8);
-  // -------------------------------------------------------------
+  if (!allRecipes) return <div>Loading...</div>;
+
+  // Processing Data
+  const trendingRecipes = [...allRecipes].sort((a, b) => (b.likes?.[0]?.count || 0) - (a.likes?.[0]?.count || 0)).slice(0, 8);
+  const japaneseRecipes = allRecipes.filter((r) => r.cuisine === "Japanese").slice(0, 4);
+  const vegetarianRecipes = allRecipes.filter((r) => r.dietary === "Vegetarian").slice(0, 4);
+  const newRecipes = [...allRecipes].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 8);
 
   return (
     <div className="min-h-screen bg-[#FDF8F0]">
       
-      {/* --- VIDEO FEED SECTION --- */}
+      {/* VIDEO FEED */}
       <div className="pt-10 pb-12 px-6">
          <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-8 text-gray-900">
@@ -50,9 +57,6 @@ export default async function DiscoverPage() {
                     <Plus size={16} /> Upload Video
                 </Link>
             </div>
-
-            {/* GRID LAYOUT (Replaced Scroll) */}
-            {/* on Mobile: 2 cols, Tablet: 3 cols, Desktop: 5 cols */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {videos?.map((video) => (
                     <VideoCard 
@@ -62,17 +66,12 @@ export default async function DiscoverPage() {
                     />
                 ))}
             </div>
-
-            {videos?.length === 0 && (
-                <div className="text-gray-500 italic text-center py-10">No videos yet. Be the first to upload!</div>
-            )}
          </div>
       </div>
-      {/* ------------------------------- */}
 
       <div className="max-w-7xl mx-auto px-6 py-10 space-y-16">
 
-        {/* --- SECTION 1: TRENDING --- */}
+        {/* TRENDING */}
         <section>
           <div className="flex items-end justify-between mb-8">
             <div>
@@ -82,10 +81,11 @@ export default async function DiscoverPage() {
               <h2 className="text-3xl font-bold text-gray-900">Trending Recipes</h2>
             </div>
           </div>
-          <FeedWrapper recipes={trendingRecipes} currentUserId={user?.id} />
+          {/* PASS LIKED IDS HERE */}
+          <FeedWrapper recipes={trendingRecipes} currentUserId={user?.id} likedRecipeIds={likedRecipeIds} />
         </section>
 
-        {/* --- SECTION 2: JAPANESE --- */}
+        {/* JAPANESE */}
         <section>
           <div className="flex items-end justify-between mb-8">
             <div>
@@ -95,10 +95,10 @@ export default async function DiscoverPage() {
               <h2 className="text-3xl font-bold text-gray-900">Taste of Japan</h2>
             </div>
           </div>
-          <FeedWrapper recipes={japaneseRecipes} currentUserId={user?.id} />
+          <FeedWrapper recipes={japaneseRecipes} currentUserId={user?.id} likedRecipeIds={likedRecipeIds} />
         </section>
         
-        {/* --- SECTION 3: VEGETARIAN --- */}
+        {/* VEGETARIAN */}
         <section>
            <div className="flex items-end justify-between mb-8">
             <div>
@@ -108,10 +108,10 @@ export default async function DiscoverPage() {
                <h2 className="text-3xl font-bold text-gray-900">Vegetarian Picks</h2>
             </div>
            </div>
-           <FeedWrapper recipes={vegetarianRecipes} currentUserId={user?.id} />
+           <FeedWrapper recipes={vegetarianRecipes} currentUserId={user?.id} likedRecipeIds={likedRecipeIds} />
         </section>
 
-        {/* --- SECTION 4: NEW --- */}
+        {/* NEW */}
         <section>
            <div className="flex items-end justify-between mb-8">
             <div>
@@ -121,7 +121,7 @@ export default async function DiscoverPage() {
                <h2 className="text-3xl font-bold text-gray-900">New Recipes</h2>
             </div>
            </div>
-           <FeedWrapper recipes={newRecipes} currentUserId={user?.id} />
+           <FeedWrapper recipes={newRecipes} currentUserId={user?.id} likedRecipeIds={likedRecipeIds} />
         </section>
 
       </div>

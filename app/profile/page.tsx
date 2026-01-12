@@ -76,6 +76,12 @@ export default async function ProfilePage() {
     .select('*', { count: 'exact', head: true })
     .eq('follower_id', authUser.id)
 
+    // --- (NEW) Fetch Liked IDs for the UI ---
+  let likedRecipeIds: string[] = [];
+  const { data: myLikes } = await supabase.from('likes').select('recipe_id').eq('user_id', authUser.id);
+  if (myLikes) likedRecipeIds = myLikes.map(l => l.recipe_id);
+
+
   return (
     <div className="min-h-screen bg-white">
       <ProfileView 
@@ -88,6 +94,7 @@ export default async function ProfilePage() {
         myVideos={myVideos || []}
         followersCount={followersCount || 0}
         followingCount={followingCount || 0}
+        likedRecipeIds={likedRecipeIds}
       />
     </div>
   )

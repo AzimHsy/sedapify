@@ -15,15 +15,16 @@ interface RecipeModalProps {
   recipe: any
   isOpen: boolean
   onClose: () => void
+  initialLikeState?: boolean
 }
 
-export default function RecipeModal({ recipe, isOpen, onClose }: RecipeModalProps) {
+export default function RecipeModal({ recipe, isOpen, onClose, initialLikeState }: RecipeModalProps) {
   const [comments, setComments] = useState<any[]>([])
   const [newComment, setNewComment] = useState('')
   const [loading, setLoading] = useState(false)
   
   // Interaction States
-  const [isLiked, setIsLiked] = useState(false)
+  const [isLiked, setIsLiked] = useState(initialLikeState || false)
   const [isSaved, setIsSaved] = useState(false)
   const [isFollowing, setIsFollowing] = useState(false)
   const [likeCount, setLikeCount] = useState(0)
@@ -96,6 +97,7 @@ export default function RecipeModal({ recipe, isOpen, onClose }: RecipeModalProp
 
   const handlePostComment = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!currentUser) return alert('Please login')
     if (!newComment.trim()) return
     setLoading(true)
     

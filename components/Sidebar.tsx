@@ -204,7 +204,7 @@ export default function Sidebar() {
                     <p className="text-xs text-gray-500 truncate">View Profile</p>
                 </div>
               </Link>
-              <button onClick={handleSignOut} className="text-gray-400 hover:text-red-500 transition">
+              <button onClick={handleSignOut} className="text-gray-400 hover:text-red-500 transition cursor-pointer">
                 <LogOut size={18} />
               </button>
             </div>
