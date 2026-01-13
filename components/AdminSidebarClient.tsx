@@ -36,8 +36,8 @@ export default function AdminSidebarClient({ navItems, userEmail }: AdminSidebar
       {/* Logo & Brand */}
       <div className="p-6 border-b border-gray-200">
         <Link href="/admin" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
-            <Image src="/fyp-logo.png" alt="Logo" width={24} height={24} className="brightness-0 invert" />
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
+            <Image src="/sedapify-logo-2.png" alt="Logo" width={40} height={40} />
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>

@@ -17,15 +17,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 async function cancelAllExpiredOrders() {
   const supabase = await createClient()
   
-  // 5 Minutes Expiry Time
-  const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+  // 1 Minutes Expiry Time
+  const oneMinutesAgo = new Date(Date.now() - 1 * 60 * 1000).toISOString()
 
-  // Cancel ANY order that is 'pending' AND older than 5 minutes
+  // Cancel ANY order that is 'pending' AND older than 1 minutes
   const { error } = await supabase
     .from('orders')
     .update({ status: 'cancelled' })
     .eq('status', 'pending')
-    .lt('created_at', fiveMinutesAgo)
+    .lt('created_at', oneMinutesAgo)
 
   if (error) console.error("Auto-Cancel Error:", error)
 }
@@ -121,27 +121,44 @@ export async function getCustomerOrders() {
   return orders || []
 }
 
-// ... (Keep payForOrderAction and verifyPayment EXACTLY the same as before) ...
+// 5. RESUME PAYMENT (Fixed: Uses Admin to save Session ID)
 export async function payForOrderAction(orderId: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: "Unauthorized" }
 
-  const { data: order } = await supabase.from('orders').select('created_at, shop_id, order_items(quantity, products(name, price, image_url))').eq('id', orderId).single()
+  // 1. Fetch Order (Standard Client - checks ownership)
+  const { data: order } = await supabase
+    .from('orders')
+    .select('created_at, shop_id, order_items(quantity, products(name, price, image_url))')
+    .eq('id', orderId)
+    .single()
+
   if (!order) return { error: "Order not found" }
 
+  // 2. Expiry Check
   const createdAt = new Date(order.created_at).getTime()
   const now = Date.now()
-  if ((now - createdAt) / 1000 / 60 > 5) {
-    // Force cancel immediately via this check as well
-    await supabase.from('orders').update({ status: 'cancelled' }).eq('id', orderId)
+  const diffInMinutes = (now - createdAt) / 1000 / 60
+
+  if (diffInMinutes > 5) {
+    // Admin Client to force cancel
+    const supabaseAdmin = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+    await supabaseAdmin.from('orders').update({ status: 'cancelled' }).eq('id', orderId)
     return { error: "Order expired. Please create a new order." }
   }
 
+  // 3. Create Stripe Session
   const line_items = order.order_items.map((item: any) => ({
     price_data: {
       currency: "myr",
-      product_data: { name: item.products.name, images: item.products.image_url ? [item.products.image_url] : [] },
+      product_data: {
+        name: item.products.name,
+        images: item.products.image_url ? [item.products.image_url] : [],
+      },
       unit_amount: Math.round(item.products.price * 100),
     },
     quantity: item.quantity,
@@ -154,12 +171,33 @@ export async function payForOrderAction(orderId: string) {
       mode: "payment",
       success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/groceries/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/orders`,
-      metadata: { userId: user.id, shopId: order.shop_id }
+      metadata: {
+        userId: user.id,
+        shopId: order.shop_id,
+      }
     });
 
-    await supabase.from('orders').update({ stripe_session_id: session.id }).eq('id', orderId)
+    // 4. CRITICAL FIX: Use Admin Client to save the new Session ID
+    // This bypasses RLS rules that might block 'UPDATE'
+    const supabaseAdmin = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
+
+    const { error: updateError } = await supabaseAdmin
+      .from('orders')
+      .update({ stripe_session_id: session.id })
+      .eq('id', orderId)
+
+    if (updateError) {
+        console.error("Failed to save session ID:", updateError)
+        return { error: "Database error" }
+    }
+
     return { url: session.url }
+
   } catch (err: any) {
+    console.error("Stripe Error:", err)
     return { error: "Payment initialization failed" }
   }
 }
@@ -181,3 +219,4 @@ export async function verifyPayment(sessionId: string) {
     return { error: err.message }
   }
 }
+

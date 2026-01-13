@@ -11,7 +11,7 @@ export default function OrderTimer({ createdAt }: { createdAt: string }) {
 
   useEffect(() => {
     const orderTime = new Date(createdAt).getTime()
-    const expireTime = orderTime + (5 * 60 * 1000) // 5 Minutes
+    const expireTime = orderTime + (1 * 60 * 1000) // 1 Minutes
 
     const interval = setInterval(() => {
       const now = Date.now()

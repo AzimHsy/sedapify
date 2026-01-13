@@ -19,7 +19,6 @@ export default function LiveMap({
   const [driverLoc, setDriverLoc] = useState<Location | null>(initialDriverLocation || null)
   const supabase = createClient()
 
-  // Base coordinates for the demo (Mid Valley area)
   // We use these to calculate "Percentage" movement on screen
   const BASE_LAT = 3.1176 
   const BASE_LNG = 101.6770

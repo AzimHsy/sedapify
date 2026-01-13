@@ -42,17 +42,10 @@ export default async function MyOrdersPage() {
               const isPending = order.status === 'pending';
               const isCancelled = order.status === 'cancelled';
               
-              // --- 1. NEW: STRICT TIME CALCULATION ---
-              const createdTime = new Date(order.created_at).getTime();
-              const now = Date.now();
-              const diffInMinutes = (now - createdTime) / 1000 / 60;
-              
-              // If it's pending AND older than 5 mins, treat it as expired visually
-              const isExpired = isPending && diffInMinutes > 5;
+              // Only allow clicking to "Track" if it is NOT pending and NOT cancelled
+              const isTrackable = !isPending && !isCancelled;
 
-              // Only track if active, paid, and not expired
-              const isTrackable = !isPending && !isCancelled && !isExpired;
-
+              // Shared Content for the card (Images)
               const OrderImages = (
                 <div className="flex gap-2 overflow-hidden mb-4 pb-2">
                     {order.order_items.map((item: any, i: number) => (
@@ -74,9 +67,8 @@ export default async function MyOrdersPage() {
                 <div 
                   key={order.id}
                   className={`block bg-white p-5 rounded-2xl shadow-sm border transition relative
-                    ${isPending && !isExpired ? 'border-orange-200 ring-2 ring-orange-50' : 'border-gray-100'}
+                    ${isPending ? 'border-orange-200 ring-2 ring-orange-50' : 'border-gray-100'}
                     ${isTrackable ? 'hover:shadow-md cursor-pointer' : ''}
-                    ${isExpired ? 'opacity-75 grayscale' : ''} 
                   `}
                 >
                   <div className="flex justify-between items-start mb-4">
@@ -87,11 +79,10 @@ export default async function MyOrdersPage() {
                       </h3>
                       {order.shops?.name && <p className="text-xs text-orange-600 font-bold mt-1">{order.shops.name}</p>}
                     </div>
-                    
-                    {/* Pass isExpired to modify badge if needed */}
-                    <StatusBadge status={isExpired ? 'cancelled' : order.status} />
+                    <StatusBadge status={order.status} />
                   </div>
 
+                  {/* 1. CONDITIONAL LINKING: Only wrap in Link if trackable */}
                   {isTrackable ? (
                     <Link href={`/order/${order.id}`} className="block">
                         {OrderImages}
@@ -106,23 +97,24 @@ export default async function MyOrdersPage() {
                       {new Date(order.created_at).toLocaleDateString()}
                     </div>
                     
-                    {/* --- 2. LOGIC: Hide Button if Expired --- */}
+                    {/* 2. ACTION BUTTONS LOGIC */}
                     
-                    {isPending && !isExpired && (
+                    {isPending && (
                         <div className="flex items-center gap-3">
                             <div className="flex flex-col items-end">
                                 <span className="text-orange-600 text-xs font-bold flex items-center gap-1 mb-1">
                                     <AlertCircle size={14} /> Payment Required
                                 </span>
+                                {/* Timer triggers refresh when done, causing Status to flip to 'cancelled' */}
                                 <OrderTimer createdAt={order.created_at} />
                             </div>
                             <PayNowButton orderId={order.id} />
                         </div>
                     )}
 
-                    {(isCancelled || isExpired) && (
+                    {isCancelled && (
                         <div className="flex items-center gap-1 text-gray-400 font-bold">
-                            <XCircle size={16} /> Cancelled / Expired
+                            <XCircle size={16} /> Cancelled
                         </div>
                     )}
 

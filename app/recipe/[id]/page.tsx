@@ -139,7 +139,7 @@ export default async function RecipePage({
                     {/* RIGHT: INSTRUCTIONS & INTERACTION */}
                     <div className="lg:col-span-2">
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">👨‍🍳 Preparation</h3>
+                            <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-2">👨‍🍳 Step by Step</h3>
                             
                             {/* UPDATED INTERACTION COMPONENT (With Modal Logic Built-in) */}
                             <RecipeInteraction 

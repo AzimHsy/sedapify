@@ -25,7 +25,7 @@ export default async function AdminUsersPage() {
                 <td className="p-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gray-200 relative overflow-hidden">
-                      {user.avatar_url && <Image src={user.avatar_url} alt="" fill className="object-cover" />}
+                      {user.avatar_url && <Image src={user.avatar_url} alt="" fill className="object-cover" /> || <div className="w-full h-full flex items-center justify-center text-gray-400"><User size={18} /></div> }
                     </div>
                     <div>
                         <p className="font-bold text-gray-900">{user.username}</p>

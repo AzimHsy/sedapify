@@ -22,7 +22,6 @@ export default function MerchantProductForm() {
   // 2. Clear Preview on Reset
   const handleReset = () => {
     setImagePreview(null)
-    // We also need to clear the actual input value, which happens when form resets
   }
 
   async function clientAction(formData: FormData) {

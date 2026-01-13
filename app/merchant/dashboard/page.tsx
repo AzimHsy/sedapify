@@ -51,7 +51,7 @@ export default async function MerchantDashboard() {
                         <p className="text-sm text-gray-500">Customer: {order.users?.username || 'Guest'}</p>
                     </div>
                     <div className="text-right">
-                        <p className="font-bold text-xl text-gray-900">RM {order.total_amount}</p>
+                        <p className="font-bold text-xl text-gray-900">RM {order.total_amount.toFixed(2)}</p>
                         {/* FIX: Suppress Hydration Warning for Date */}
                         <p className="text-xs text-gray-400" suppressHydrationWarning>
                             {new Date(order.created_at).toLocaleString()}
