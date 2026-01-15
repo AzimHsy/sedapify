@@ -45,7 +45,7 @@ export default async function Home() {
     <main className="min-h-screen bg-[#FDF8F0] pb-24">
       
       {/* HEADER */}
-      <div className="bg-white/60 backdrop-blur-md pt-10 pb-10 sticky top-0 z-20">
+      <div className="bg-white/60 backdrop-blur-md pt-10 px-8 md:px-12 pb-10 sticky top-0 z-20">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div>
             <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
@@ -56,7 +56,7 @@ export default async function Home() {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 md:px-6 space-y-10 mt-2">
+      <div className="max-w-7xl mx-auto px-4 md:px-6 space-y-10">
 
         {/* AI GENERATOR HERO */}
         <div className="overflow-hidden relative group hover:shadow-orange-200/60 transition-all duration-500">

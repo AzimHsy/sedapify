@@ -220,3 +220,31 @@ export async function verifyPayment(sessionId: string) {
   }
 }
 
+// === NEW ACTION: FORCE EXPIRY ===
+export async function expireOrderNow(orderId: string) {
+  // Use Admin Client to bypass RLS and ensure cancellation happens regardless of who calls it
+  const supabaseAdmin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  const { error } = await supabaseAdmin
+    .from('orders')
+    .update({ status: 'cancelled' })
+    .eq('id', orderId)
+    .eq('status', 'pending') // Only cancel if still pending
+
+  if (error) {
+    console.error("Expiry Error:", error)
+    return { error: error.message }
+  }
+
+  // Refresh all relevant paths immediately
+  revalidatePath('/orders')
+  revalidatePath('/merchant/dashboard')
+  revalidatePath('/admin/orders')
+  revalidatePath(`/order/${orderId}`)
+  
+  return { success: true }
+}
+

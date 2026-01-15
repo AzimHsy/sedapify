@@ -3,24 +3,30 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Clock } from 'lucide-react'
+import { expireOrderNow } from '@/app/actions/orderActions' // <--- Import Action
 
-export default function OrderTimer({ createdAt }: { createdAt: string }) {
+export default function OrderTimer({ createdAt, orderId }: { createdAt: string, orderId: string }) { // <--- Add orderId prop
   const router = useRouter()
   const [timeLeft, setTimeLeft] = useState("")
   const [isExpired, setIsExpired] = useState(false)
 
   useEffect(() => {
     const orderTime = new Date(createdAt).getTime()
-    const expireTime = orderTime + (1 * 60 * 1000) // 1 Minutes
+    const expireTime = orderTime + (1 * 60 * 1000) // 1 Minute
 
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       const now = Date.now()
       const diff = expireTime - now
 
       if (diff <= 0) {
-        setIsExpired(true)
         clearInterval(interval)
-        router.refresh() // Refresh page to trigger backend cancellation
+        if (!isExpired) {
+            setIsExpired(true)
+            // 1. Trigger Database Update
+            await expireOrderNow(orderId) 
+            // 2. Refresh UI
+            router.refresh()
+        }
       } else {
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
         const seconds = Math.floor((diff % (1000 * 60)) / 1000)
@@ -29,7 +35,7 @@ export default function OrderTimer({ createdAt }: { createdAt: string }) {
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [createdAt, router])
+  }, [createdAt, router, orderId, isExpired])
 
   if (isExpired) return <span className="text-red-600 font-bold text-xs">Expired</span>
 

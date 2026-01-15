@@ -2,6 +2,7 @@ import { getOrders, updateOrderStatus } from '@/app/actions/orderActions'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Package, CheckCircle, Truck } from 'lucide-react'
+import RealtimeOrdersListener from '@/components/RealTimeOrdersListener'    
 import Image from 'next/image'
 
 export default async function MerchantDashboard() {
@@ -18,6 +19,7 @@ export default async function MerchantDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 md:p-10">
+        <RealtimeOrdersListener />
       <div className="max-w-5xl mx-auto">
         
         <header className="mb-10 flex justify-between items-center">

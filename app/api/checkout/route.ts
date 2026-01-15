@@ -3,13 +3,13 @@ import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-12-15.clover',
+  apiVersion: '2025-12-15.clover' as any,
 });
 
 export async function POST(req: Request) {
   try {
-    // 1. EXTRACT shopId from the request
-    const { cartItems, shopName, shopId } = await req.json();
+    // 1. EXTRACT deliveryFee
+    const { cartItems, shopName, shopId, deliveryFee } = await req.json();
 
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -19,10 +19,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
     }
 
-    // Calculate Total
-    const totalAmount = cartItems.reduce((acc: number, item: any) => acc + (item.price * item.qty), 0);
+    // 2. CALCULATE TOTAL (Items + Delivery)
+    const itemsTotal = cartItems.reduce((acc: number, item: any) => acc + (item.price * item.qty), 0);
+    // Ensure we handle the case where deliveryFee might be undefined/null
+    const fee = typeof deliveryFee === 'number' ? deliveryFee : 0;
+    const totalAmount = itemsTotal + fee;
 
-    // Create Stripe Line Items
+    // 3. CREATE STRIPE LINE ITEMS
     const line_items = cartItems.map((item: any) => ({
       price_data: {
         currency: "myr",
@@ -34,6 +37,21 @@ export async function POST(req: Request) {
       },
       quantity: item.qty,
     }));
+
+    // --- FIX: ADD DELIVERY FEE LINE ITEM ---
+    if (fee > 0) {
+      line_items.push({
+        price_data: {
+          currency: "myr",
+          product_data: {
+            name: "Delivery Fee",
+            description: "Distance-based delivery charge"
+          },
+          unit_amount: Math.round(fee * 100),
+        },
+        quantity: 1,
+      });
+    }
 
     // Create Stripe Session
     const session = await stripe.checkout.sessions.create({
@@ -48,13 +66,13 @@ export async function POST(req: Request) {
       }
     });
 
-    // 2. SAVE ORDER TO DATABASE
+    // 4. SAVE ORDER WITH CORRECT TOTAL
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
         user_id: user.id,
-        shop_id: shopId, // <--- CRITICAL: THIS MUST BE SAVED
-        total_amount: totalAmount,
+        shop_id: shopId,
+        total_amount: totalAmount, // <--- Now includes delivery
         status: 'pending',
         stripe_session_id: session.id
       })

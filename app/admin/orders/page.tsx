@@ -1,12 +1,14 @@
 import { getAdminOrders } from '@/app/actions/adminActions'
 import { Truck, User, Store } from 'lucide-react'
 import AdminCancelButton from '@/components/AdminCancelButton'
+import RealtimeOrdersListener from '@/components/RealTimeOrdersListener'
 
 export default async function AdminOrdersPage() {
   const orders = await getAdminOrders() || []
 
   return (
     <div>
+      <RealtimeOrdersListener /> 
       <h1 className="text-2xl font-bold mb-6">Order Oversight</h1>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">

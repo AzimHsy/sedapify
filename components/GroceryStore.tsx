@@ -118,7 +118,8 @@ export default function GroceryStore({
             body: JSON.stringify({ 
                 cartItems, 
                 shopName: activeShop.name,
-                shopId: activeShop.id
+                shopId: activeShop.id,
+                deliveryFee,
             }),
         });
         const data = await response.json();
